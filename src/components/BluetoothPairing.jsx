@@ -1,0 +1,260 @@
+import React, { useState, useEffect } from 'react';
+import { useApp } from '../context/AppContext';
+import { Bluetooth, RefreshCw, Smartphone, Laptop, ShieldAlert, Award, Headphones, Watch } from 'lucide-react';
+
+export default function BluetoothPairing() {
+  const {
+    bluetoothDevices,
+    isBluetoothScanning,
+    pairedBluetoothDevices,
+    bluetoothHandshakeState,
+    bluetoothPairingDevice,
+    startBluetoothScan,
+    stopBluetoothScan,
+    pairBluetoothDevice,
+    setBluetoothHandshakeState
+  } = useApp();
+
+  const [verificationCode, setVerificationCode] = useState('');
+
+  // Generate a random pair verification code when handshaking starts
+  useEffect(() => {
+    if (bluetoothHandshakeState === 'pairing') {
+      const code = Math.floor(100000 + Math.random() * 900000).toString();
+      setVerificationCode(code);
+    }
+  }, [bluetoothHandshakeState]);
+
+  const getDeviceIcon = (type) => {
+    switch (type) {
+      case 'headphones':
+        return Headphones;
+      case 'watch':
+        return Watch;
+      case 'tablet':
+      case 'mobile':
+        return Smartphone;
+      default:
+        return Laptop;
+    }
+  };
+
+  return (
+    <div className="flex-1 flex h-screen overflow-hidden select-none">
+      
+      {/* LEFT COLUMN: Animated Radar Screen */}
+      <div className="w-1/2 flex flex-col items-center justify-center p-8 border-r border-white/5 relative bg-slate-950/20">
+        
+        {/* Title area */}
+        <div className="absolute top-8 left-8">
+          <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent">
+            Bluetooth Sync
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">Local backup node discovery</p>
+        </div>
+
+        {/* Outer radar frame */}
+        <div className="relative w-64 h-64 md:w-80 md:h-80 rounded-full border border-white/10 flex items-center justify-center bg-slate-900/10 shadow-2xl">
+          
+          {/* Scanning Sweep Hand */}
+          {isBluetoothScanning && (
+            <div className="absolute inset-0 rounded-full overflow-hidden">
+              <div 
+                className="absolute top-1/2 left-1/2 w-[160px] h-[160px] md:w-[200px] md:h-[200px] bg-gradient-to-tr from-accent/20 to-transparent animate-radar-sweep origin-top-left"
+                style={{ top: '0', left: '0', transformOrigin: 'bottom right' }}
+              />
+            </div>
+          )}
+
+          {/* Concentric rings */}
+          <div className="absolute w-[80%] h-[80%] rounded-full border border-white/5 flex items-center justify-center" />
+          <div className="absolute w-[60%] h-[60%] rounded-full border border-white/5 flex items-center justify-center" />
+          <div className="absolute w-[40%] h-[40%] rounded-full border border-white/5 flex items-center justify-center" />
+          <div className="absolute w-[20%] h-[20%] rounded-full border border-white/5 flex items-center justify-center" />
+          
+          {/* Radar axes */}
+          <div className="absolute w-full h-[1px] bg-white/5" />
+          <div className="absolute h-full w-[1px] bg-white/5" />
+
+          {/* Central flashing bluetooth core */}
+          <div className="relative w-12 h-12 rounded-full bg-slate-950/80 border border-accent/40 flex items-center justify-center shadow-lg shadow-accent/20 z-20">
+            <Bluetooth className={`w-5 h-5 text-accent ${isBluetoothScanning ? 'animate-pulse' : ''}`} />
+          </div>
+
+          {/* Discoverable devices mapped onto the radar */}
+          {isBluetoothScanning && bluetoothDevices.map((device, index) => {
+            // Give each device a static angle and radius on the radar map based on their ID hash
+            const angle = (device.id.charCodeAt(5) || 45) * 12; 
+            const radius = 40 + (index * 20); // offset rings
+            const x = Math.cos((angle * Math.PI) / 180) * radius;
+            const y = Math.sin((angle * Math.PI) / 180) * radius;
+            const isPaired = pairedBluetoothDevices.includes(device.id);
+
+            return (
+              <div
+                key={device.id}
+                onClick={() => !isPaired && pairBluetoothDevice(device)}
+                className={`absolute w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-125 z-30 group ${
+                  isPaired ? 'bg-emerald-500' : 'bg-accent'
+                }`}
+                style={{
+                  transform: `translate(${x}px, ${y}px)`,
+                }}
+              >
+                <div className={`absolute -inset-2 rounded-full animate-ping bg-accent/20`} />
+                
+                {/* Tooltip on Hover */}
+                <div className="absolute bottom-full mb-2 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
+                  {device.name}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Scan Actions */}
+        <div className="absolute bottom-8 flex gap-4">
+          {!isBluetoothScanning ? (
+            <button
+              onClick={startBluetoothScan}
+              className="px-6 py-2 rounded-xl bg-accent text-slate-950 text-xs font-semibold hover:bg-accent-light shadow-md shadow-accent/20 transition-all duration-300"
+            >
+              Start Bluetooth Scan
+            </button>
+          ) : (
+            <button
+              onClick={stopBluetoothScan}
+              className="px-6 py-2 rounded-xl bg-slate-900 border border-white/10 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition-all duration-300"
+            >
+              Stop Scanning
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* RIGHT COLUMN: Device List & Pairing Actions */}
+      <div className="w-1/2 flex flex-col h-screen overflow-hidden p-8 bg-slate-950/40">
+        
+        {/* Toggle between standard list and connection handshake overlay */}
+        {bluetoothHandshakeState === 'idle' ? (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
+              Discovered Peripherals
+            </h2>
+
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+              {bluetoothDevices.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center text-slate-500">
+                  <p className="text-xs">No bluetooth devices discoverable.</p>
+                  <p className="text-[10px] mt-1 max-w-xs text-slate-600">
+                    Click 'Start Bluetooth Scan' on the left to request scanning updates.
+                  </p>
+                </div>
+              ) : (
+                bluetoothDevices.map((device) => {
+                  const DeviceIcon = getDeviceIcon(device.type);
+                  const isPaired = pairedBluetoothDevices.includes(device.id);
+
+                  return (
+                    <div
+                      key={device.id}
+                      className="glass-card hover:bg-slate-900/60 p-4 flex items-center justify-between border-white/5 hover:border-accent/20 transition-all duration-300 cursor-pointer"
+                      onClick={() => !isPaired && pairBluetoothDevice(device)}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-slate-950 rounded-xl border border-white/5 text-slate-400">
+                          <DeviceIcon className="w-4 h-4" />
+                        </div>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-semibold text-slate-200">{device.name}</span>
+                          <span className="text-[9px] text-slate-500 font-mono mt-0.5">{device.id}</span>
+                        </div>
+                      </div>
+
+                      {isPaired ? (
+                        <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 px-2 py-1 rounded-md uppercase tracking-wider">
+                          Paired
+                        </span>
+                      ) : (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            pairBluetoothDevice(device);
+                          }}
+                          className="text-[9px] bg-accent/10 hover:bg-accent text-accent hover:text-slate-950 font-bold border border-accent/20 hover:border-transparent px-2.5 py-1 rounded-md uppercase tracking-wider transition-colors duration-200"
+                        >
+                          Pair
+                        </button>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+        ) : (
+          /* Connecting / Pairing Handshake View */
+          <div className="flex-1 flex flex-col items-center justify-center p-6 border border-white/5 rounded-2xl bg-slate-900/10 shadow-2xl relative overflow-hidden">
+            
+            {/* Pulsing colored glow backdrop */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-pulse" />
+
+            {bluetoothHandshakeState === 'pairing' && (
+              <div className="flex flex-col items-center text-center relative z-10">
+                <div className="w-16 h-16 rounded-full bg-accent/10 border border-accent/30 flex items-center justify-center mb-6">
+                  <RefreshCw className="w-6 h-6 text-accent animate-spin" style={{ animationDuration: '3s' }} />
+                </div>
+                
+                <h3 className="text-sm font-semibold text-slate-200">Pairing Handshake</h3>
+                <p className="text-xs text-slate-500 mt-1 max-w-xs">
+                  Validating encryption channels with <strong>{bluetoothPairingDevice?.name}</strong>...
+                </p>
+
+                {/* Handshake security verification key */}
+                <div className="mt-6 bg-slate-950/80 border border-white/10 px-6 py-3 rounded-2xl font-mono text-2xl font-bold tracking-widest text-accent shadow-inner">
+                  {verificationCode}
+                </div>
+                <p className="text-[10px] text-slate-500 mt-2">
+                  Verify this authentication key matches the pin on your device.
+                </p>
+              </div>
+            )}
+
+            {bluetoothHandshakeState === 'success' && (
+              <div className="flex flex-col items-center text-center relative z-10 animate-fade-in">
+                <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-6">
+                  <Award className="w-6 h-6 text-emerald-400 animate-bounce" />
+                </div>
+                
+                <h3 className="text-sm font-semibold text-slate-200">Pairing Succeeded</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  <strong>{bluetoothPairingDevice?.name}</strong> has been linked as a backup node.
+                </p>
+              </div>
+            )}
+            
+            {bluetoothHandshakeState === 'failed' && (
+              <div className="flex flex-col items-center text-center relative z-10">
+                <div className="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/30 flex items-center justify-center mb-6">
+                  <ShieldAlert className="w-6 h-6 text-red-400" />
+                </div>
+                
+                <h3 className="text-sm font-semibold text-slate-200">Handshake Rejected</h3>
+                <p className="text-xs text-slate-500 mt-1">
+                  Pair challenge code could not be verified by the peripheral device.
+                </p>
+                
+                <button
+                  onClick={() => setBluetoothHandshakeState('idle')}
+                  className="mt-6 px-4 py-1.5 rounded-lg bg-slate-900 border border-white/5 text-slate-300 text-xs font-semibold hover:bg-slate-800 transition-colors duration-200"
+                >
+                  Back to List
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
