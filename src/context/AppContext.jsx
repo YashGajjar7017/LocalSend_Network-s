@@ -227,13 +227,18 @@ export const AppProvider = ({ children }) => {
   }, [settings.autoFinish, outgoingTransfer]);
 
   // Settings updating abstraction
-  const updateSettings = async (newSettings) => {
-    if (window.electronAPI) {
-      const updated = await window.electronAPI.updateSettings(newSettings);
-      setSettings(updated);
-    } else {
-      setSettings((prev) => ({ ...prev, ...newSettings }));
-    }
+  const updateSettings = (newSettings) => {
+    setSettings((prev) => {
+      const next = { ...prev, ...newSettings };
+      
+      // Save to disk in the background
+      if (window.electronAPI) {
+        window.electronAPI.updateSettings(newSettings).then((latest) => {
+          setSettings(latest);
+        });
+      }
+      return next;
+    });
   };
 
   const changeTab = (tab) => {

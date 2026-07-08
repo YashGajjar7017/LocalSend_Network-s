@@ -151,13 +151,23 @@ function createWindow() {
   // Hide native menu
   mainWindow.setMenuBarVisibility(false);
 
-  // Load target
   if (app.isPackaged) {
     mainWindow.loadFile(path.join(__dirname, 'dist', 'index.html'));
   } else {
-    mainWindow.loadURL('http://localhost:5173');
-    // Open devtools in development mode
-    mainWindow.webContents.openDevTools({ mode: 'detach' });
+    const loadDevServer = () => {
+      mainWindow.loadURL('http://localhost:5173').catch(() => {
+        setTimeout(loadDevServer, 500);
+      });
+    };
+    loadDevServer();
+
+    // Only open devtools on F12 press
+    mainWindow.webContents.on('before-input-event', (event, input) => {
+      if (input.key === 'F12' && input.type === 'keyDown') {
+        mainWindow.webContents.toggleDevTools();
+        event.preventDefault();
+      }
+    });
   }
 
   mainWindow.once('ready-to-show', () => {
@@ -221,6 +231,10 @@ ipcMain.handle('db-update-settings', (event, newSettings) => {
 
 ipcMain.handle('db-get-history', () => {
   return db.getHistory();
+});
+
+ipcMain.handle('db-add-history', (event, entry) => {
+  return db.addHistoryEntry(entry);
 });
 
 ipcMain.handle('db-clear-history', () => {

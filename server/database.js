@@ -32,6 +32,10 @@ class LocalDatabase {
 
   init() {
     try {
+      const dir = path.dirname(this.dbPath);
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
       if (fs.existsSync(this.dbPath)) {
         const fileContent = fs.readFileSync(this.dbPath, 'utf8');
         const parsed = JSON.parse(fileContent);

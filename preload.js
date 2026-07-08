@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getSettings: () => ipcRenderer.invoke('db-get-settings'),
   updateSettings: (settings) => ipcRenderer.invoke('db-update-settings', settings),
   getHistory: () => ipcRenderer.invoke('db-get-history'),
+  addHistoryEntry: (entry) => ipcRenderer.invoke('db-add-history', entry),
   clearHistory: () => ipcRenderer.invoke('db-clear-history'),
   
   // App Operations

@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Bluetooth, RefreshCw, Smartphone, Laptop, ShieldAlert, Award, Headphones, Watch } from 'lucide-react';
+import { 
+  Bluetooth, RefreshCw, Smartphone, Laptop, ShieldAlert, Award, 
+  Headphones, Watch, File, CheckCircle2, ArrowLeft, ArrowUpRight 
+} from 'lucide-react';
 
 export default function BluetoothPairing() {
   const {
@@ -12,18 +15,77 @@ export default function BluetoothPairing() {
     startBluetoothScan,
     stopBluetoothScan,
     pairBluetoothDevice,
-    setBluetoothHandshakeState
+    setBluetoothHandshakeState,
+    settings
   } = useApp();
 
   const [verificationCode, setVerificationCode] = useState('');
+  
+  // Simulated transfer states
+  const [transferState, setTransferState] = useState('idle'); // 'idle', 'selecting', 'sending', 'completed'
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const [speed, setSpeed] = useState(0.0);
+  const [activeDevice, setActiveDevice] = useState(null);
 
-  // Generate a random pair verification code when handshaking starts
+  const sampleFiles = [
+    { name: 'Project_Overview.pdf', size: 4851200, displaySize: '4.6 MB' },
+    { name: 'UI_Assets.zip', size: 67310080, displaySize: '64.2 MB' },
+    { name: 'Backup_Database.db', size: 19293798, displaySize: '18.4 MB' }
+  ];
+
+  // Generate pairing code
   useEffect(() => {
     if (bluetoothHandshakeState === 'pairing') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       setVerificationCode(code);
     }
   }, [bluetoothHandshakeState]);
+
+  // Handle simulated transfer progression
+  useEffect(() => {
+    let timer = null;
+    if (transferState === 'sending') {
+      setProgress(0);
+      setSpeed(1.8 + Math.random() * 2);
+      
+      timer = setInterval(() => {
+        setProgress((prev) => {
+          if (prev >= 100) {
+            clearInterval(timer);
+            setTransferState('completed');
+            
+            // Log transfer to JSON database
+            if (window.electronAPI && activeDevice && selectedFile) {
+              window.electronAPI.addHistoryEntry({
+                fileName: selectedFile.name,
+                size: selectedFile.size,
+                senderDevice: 'Me',
+                receiverDevice: activeDevice.name,
+                status: 'Completed',
+                filePath: 'C:\\Bluetooth\\' + selectedFile.name,
+                direction: 'outgoing'
+              });
+            }
+            
+            // Send native notification if enabled
+            if (settings.autoFinish) {
+              new Notification('Bluetooth Transfer Complete', {
+                body: `Successfully sent ${selectedFile.name} to ${activeDevice.name}`
+              });
+            }
+
+            return 100;
+          }
+          setSpeed(2.0 + Math.random() * 1.5);
+          return prev + Math.floor(5 + Math.random() * 8);
+        });
+      }, 200);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [transferState, selectedFile, activeDevice, settings.autoFinish]);
 
   const getDeviceIcon = (type) => {
     switch (type) {
@@ -37,6 +99,21 @@ export default function BluetoothPairing() {
       default:
         return Laptop;
     }
+  };
+
+  const handleDeviceClick = (device) => {
+    const isPaired = pairedBluetoothDevices.includes(device.id);
+    if (!isPaired) {
+      pairBluetoothDevice(device);
+    } else {
+      setActiveDevice(device);
+      setTransferState('selecting');
+    }
+  };
+
+  const startSendingFile = (file) => {
+    setSelectedFile(file);
+    setTransferState('sending');
   };
 
   return (
@@ -83,9 +160,8 @@ export default function BluetoothPairing() {
 
           {/* Discoverable devices mapped onto the radar */}
           {isBluetoothScanning && bluetoothDevices.map((device, index) => {
-            // Give each device a static angle and radius on the radar map based on their ID hash
             const angle = (device.id.charCodeAt(5) || 45) * 12; 
-            const radius = 40 + (index * 20); // offset rings
+            const radius = 40 + (index * 20);
             const x = Math.cos((angle * Math.PI) / 180) * radius;
             const y = Math.sin((angle * Math.PI) / 180) * radius;
             const isPaired = pairedBluetoothDevices.includes(device.id);
@@ -93,15 +169,15 @@ export default function BluetoothPairing() {
             return (
               <div
                 key={device.id}
-                onClick={() => !isPaired && pairBluetoothDevice(device)}
+                onClick={() => handleDeviceClick(device)}
                 className={`absolute w-3.5 h-3.5 rounded-full flex items-center justify-center cursor-pointer transition-all duration-500 hover:scale-125 z-30 group ${
-                  isPaired ? 'bg-emerald-500' : 'bg-accent'
+                  isPaired ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-accent shadow-[0_0_10px_var(--color-accent-glow)]'
                 }`}
                 style={{
                   transform: `translate(${x}px, ${y}px)`,
                 }}
               >
-                <div className={`absolute -inset-2 rounded-full animate-ping bg-accent/20`} />
+                <div className={`absolute -inset-2 rounded-full animate-ping ${isPaired ? 'bg-emerald-500/20' : 'bg-accent/20'}`} />
                 
                 {/* Tooltip on Hover */}
                 <div className="absolute bottom-full mb-2 bg-slate-900 border border-white/10 rounded-lg px-2 py-1 text-[10px] text-white opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-200 whitespace-nowrap">
@@ -117,7 +193,7 @@ export default function BluetoothPairing() {
           {!isBluetoothScanning ? (
             <button
               onClick={startBluetoothScan}
-              className="px-6 py-2 rounded-xl bg-accent text-slate-950 text-xs font-semibold hover:bg-accent-light shadow-md shadow-accent/20 transition-all duration-300"
+              className="px-6 py-2 rounded-xl bg-accent text-slate-950 text-xs font-semibold hover:bg-accent-light shadow-md shadow-accent/20 transition-all duration-300 animate-pulse"
             >
               Start Bluetooth Scan
             </button>
@@ -132,11 +208,11 @@ export default function BluetoothPairing() {
         </div>
       </div>
 
-      {/* RIGHT COLUMN: Device List & Pairing Actions */}
+      {/* RIGHT COLUMN: Device List / Handshake / Transfer Simulator */}
       <div className="w-1/2 flex flex-col h-screen overflow-hidden p-8 bg-slate-950/40">
         
-        {/* Toggle between standard list and connection handshake overlay */}
-        {bluetoothHandshakeState === 'idle' ? (
+        {/* VIEW 1: Idle list */}
+        {bluetoothHandshakeState === 'idle' && transferState === 'idle' && (
           <div className="flex-1 flex flex-col h-full overflow-hidden">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
               Discovered Peripherals
@@ -159,7 +235,7 @@ export default function BluetoothPairing() {
                     <div
                       key={device.id}
                       className="glass-card hover:bg-slate-900/60 p-4 flex items-center justify-between border-white/5 hover:border-accent/20 transition-all duration-300 cursor-pointer"
-                      onClick={() => !isPaired && pairBluetoothDevice(device)}
+                      onClick={() => handleDeviceClick(device)}
                     >
                       <div className="flex items-center gap-3">
                         <div className="p-2.5 bg-slate-950 rounded-xl border border-white/5 text-slate-400">
@@ -173,7 +249,7 @@ export default function BluetoothPairing() {
 
                       {isPaired ? (
                         <span className="text-[9px] bg-emerald-500/10 text-emerald-400 font-bold border border-emerald-500/20 px-2 py-1 rounded-md uppercase tracking-wider">
-                          Paired
+                          Ready
                         </span>
                       ) : (
                         <button
@@ -192,11 +268,11 @@ export default function BluetoothPairing() {
               )}
             </div>
           </div>
-        ) : (
-          /* Connecting / Pairing Handshake View */
+        )}
+
+        {/* VIEW 2: Bluetooth Handshake in Progress */}
+        {bluetoothHandshakeState !== 'idle' && (
           <div className="flex-1 flex flex-col items-center justify-center p-6 border border-white/5 rounded-2xl bg-slate-900/10 shadow-2xl relative overflow-hidden">
-            
-            {/* Pulsing colored glow backdrop */}
             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-accent/5 rounded-full blur-3xl animate-pulse" />
 
             {bluetoothHandshakeState === 'pairing' && (
@@ -210,7 +286,6 @@ export default function BluetoothPairing() {
                   Validating encryption channels with <strong>{bluetoothPairingDevice?.name}</strong>...
                 </p>
 
-                {/* Handshake security verification key */}
                 <div className="mt-6 bg-slate-950/80 border border-white/10 px-6 py-3 rounded-2xl font-mono text-2xl font-bold tracking-widest text-accent shadow-inner">
                   {verificationCode}
                 </div>
@@ -252,6 +327,108 @@ export default function BluetoothPairing() {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* VIEW 3: Paired Device File Selector */}
+        {transferState === 'selecting' && activeDevice && (
+          <div className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="flex items-center gap-2 mb-6">
+              <button 
+                onClick={() => setTransferState('idle')}
+                className="p-2 rounded-lg bg-slate-900 border border-white/5 text-slate-400 hover:text-white"
+              >
+                <ArrowLeft className="w-4 h-4" />
+              </button>
+              <div>
+                <h2 className="text-xs font-bold text-accent uppercase tracking-widest">Share to Node</h2>
+                <span className="text-sm font-bold text-slate-200 block">{activeDevice.name}</span>
+              </div>
+            </div>
+
+            <span className="text-xs text-slate-400 mb-4 block font-medium">Select a file to transfer over Bluetooth:</span>
+
+            <div className="flex-1 space-y-3 overflow-y-auto pr-2">
+              {sampleFiles.map((file) => (
+                <div
+                  key={file.name}
+                  onClick={() => startSendingFile(file)}
+                  className="glass-card hover:bg-slate-900/60 p-4 border-white/5 hover:border-accent/20 transition-all duration-300 cursor-pointer flex items-center justify-between group"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-slate-950 rounded-xl border border-white/5 text-slate-400 group-hover:text-accent transition-colors">
+                      <File className="w-4 h-4" />
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-xs font-semibold text-slate-200">{file.name}</span>
+                      <span className="text-[9px] text-slate-500 mt-0.5">{file.displaySize}</span>
+                    </div>
+                  </div>
+                  <ArrowUpRight className="w-4 h-4 text-slate-500 group-hover:text-accent group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 4: In-flight Transfer progress */}
+        {transferState === 'sending' && selectedFile && activeDevice && (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 border border-white/5 rounded-2xl bg-slate-900/10 shadow-2xl relative">
+            <div className="w-16 h-16 rounded-2xl bg-slate-950 border border-white/5 flex items-center justify-center mb-6">
+              <RefreshCw className="w-6 h-6 text-accent animate-spin" style={{ animationDuration: '3s' }} />
+            </div>
+
+            <h3 className="text-sm font-semibold text-slate-200">Bluetooth Transferring</h3>
+            <span className="text-xs text-slate-500 font-mono mt-1">{selectedFile.name}</span>
+
+            {/* Circular Progress Bar overlay */}
+            <div className="w-full mt-8 mb-6 px-4">
+              <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono mb-2">
+                <span>{progress}%</span>
+                <span>{speed.toFixed(1)} MB/s</span>
+              </div>
+              <div className="w-full h-1.5 bg-slate-950 rounded-full overflow-hidden border border-white/5">
+                <div 
+                  className="h-full bg-gradient-to-r from-accent to-accent-light rounded-full shadow-[0_0_10px_var(--color-accent-glow)] transition-all duration-300"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+              <span className="text-[9px] text-slate-600 block mt-2 text-center">
+                Protocol: Bluetooth 5.2 LE Encrypted Channels
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 5: Completed successfully */}
+        {transferState === 'completed' && selectedFile && activeDevice && (
+          <div className="flex-1 flex flex-col items-center justify-center p-6 border border-white/5 rounded-2xl bg-slate-900/10 shadow-2xl">
+            <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center mb-4 text-emerald-400">
+              <CheckCircle2 className="w-8 h-8 animate-bounce" />
+            </div>
+
+            <h3 className="text-sm font-semibold text-slate-200">File Sent Successfully</h3>
+            <p className="text-xs text-slate-500 mt-1.5 text-center px-4 leading-relaxed">
+              <strong>{selectedFile.name}</strong> was delivered to <strong>{activeDevice.name}</strong>.
+            </p>
+
+            <div className="mt-8 flex gap-4 w-full px-6">
+              <button
+                onClick={() => setTransferState('selecting')}
+                className="flex-1 py-2 rounded-xl bg-slate-950 border border-white/5 text-slate-400 text-xs font-semibold hover:text-white hover:bg-slate-900 transition-colors"
+              >
+                Send Another
+              </button>
+              <button
+                onClick={() => {
+                  setTransferState('idle');
+                  setActiveDevice(null);
+                }}
+                className="flex-1 py-2 rounded-xl bg-accent text-slate-950 text-xs font-semibold hover:bg-accent-light shadow-md shadow-accent/20 transition-colors"
+              >
+                Done
+              </button>
+            </div>
           </div>
         )}
       </div>

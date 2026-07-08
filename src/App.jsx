@@ -26,8 +26,15 @@ function MainLayout() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100 relative">
       
+      {/* Liquid fluid background */}
+      <div className="liquid-bg">
+        <div className="liquid-orb liquid-orb-1" />
+        <div className="liquid-orb liquid-orb-2" />
+        <div className="liquid-orb liquid-orb-3" />
+      </div>
+
       {/* Sidebar navigation */}
       <Sidebar />
 
