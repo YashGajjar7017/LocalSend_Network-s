@@ -1,3 +1,4 @@
+require('dotenv').config();
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage } = require('electron');
 const path = require('path');
 const fs = require('fs');
@@ -427,11 +428,157 @@ ipcMain.handle('github-signin', async () => {
     authWindow.webContents.on('will-navigate', (event, url) => {
       if (url.includes('?auth=success')) {
         authWindow.close();
+        
+        // Retrieve credentials from .env
+        const client_id = process.env.GITHUB_CLIENT_ID;
+        console.log(`GitHub SignIn authorized with Client ID: ${client_id}`);
+        
         resolve({
           username: 'GithubUserData',
           name: 'Yash Gajjar',
           avatar_url: 'https://avatars.githubusercontent.com/u/70177017?v=4',
           html_url: 'https://github.com/GithubUserData'
+        });
+      }
+    });
+
+    authWindow.on('closed', () => {
+      resolve(null);
+    });
+  });
+});
+
+ipcMain.handle('google-signin', async () => {
+  return new Promise((resolve) => {
+    const authWindow = new BrowserWindow({
+      width: 450,
+      height: 600,
+      parent: mainWindow,
+      modal: true,
+      title: 'Sign in with Google',
+      show: false,
+      resizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    authWindow.setMenuBarVisibility(false);
+
+    const mockHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sign in with Google</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 40px 24px;
+            background-color: #ffffff;
+            color: #333333;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin: 0;
+          }
+          .logo {
+            width: 48px;
+            height: 48px;
+            margin-bottom: 24px;
+          }
+          h2 {
+            font-size: 22px;
+            font-weight: 500;
+            margin: 0 0 8px 0;
+            color: #202124;
+          }
+          p {
+            font-size: 14px;
+            color: #5f6368;
+            margin: 0 0 32px 0;
+            line-height: 1.5;
+            max-width: 320px;
+          }
+          .card {
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 24px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #dadce0;
+          }
+          .btn {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            box-shadow: 0 1px 2px 0 rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);
+          }
+          .btn:hover {
+            background-color: #1557b0;
+          }
+          .btn-cancel {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: #1a73e8;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 16px;
+          }
+          .btn-cancel:hover {
+            color: #1557b0;
+          }
+        </style>
+      </head>
+      <body>
+        <svg class="logo" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l3.66-2.85z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.85c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+        <h2>Sign in to AirSync</h2>
+        <p>Using Google Account credentials to link your cloud relay profile.</p>
+        <div class="card">
+          <button class="btn" onclick="authorize()">Authorize GoogleAccount</button>
+          <center><button class="btn-cancel" onclick="cancel()">Cancel</button></center>
+        </div>
+
+        <script>
+          function authorize() {
+            window.location.href = '?auth=success';
+          }
+          function cancel() {
+            window.close();
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    authWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(mockHtml));
+    
+    authWindow.once('ready-to-show', () => {
+      authWindow.show();
+    });
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.includes('?auth=success')) {
+        authWindow.close();
+        
+        // Retrieve credentials from .env
+        const client_id = process.env.GOOGLE_CLIENT_ID;
+        console.log(`Google SignIn authorized with Client ID: ${client_id}`);
+        
+        resolve({
+          username: 'GoogleUser',
+          name: 'Yash Google Auth',
+          avatar_url: 'https://lh3.googleusercontent.com/a/default-user=s96-c',
+          html_url: '#'
         });
       }
     });

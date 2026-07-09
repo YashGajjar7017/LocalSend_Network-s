@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restartServer: () => ipcRenderer.invoke('server-restart'),
   getNetworkInfo: () => ipcRenderer.invoke('get-network-info'),
   githubSignin: () => ipcRenderer.invoke('github-signin'),
+  googleSignin: () => ipcRenderer.invoke('google-signin'),
   
   // File Transfer Control
   selectAndSendFile: (peer) => ipcRenderer.send('select-and-send-file', peer),

@@ -13,6 +13,7 @@ import {
   Lock,
   Globe,
   Github,
+  Chrome,
   Info,
   Heart,
   FileText,
@@ -29,10 +30,13 @@ export default function SettingsPanel() {
     updateSettings,
     selectDownloadsFolder,
     githubUser,
+    googleUser,
     serverState,
     networkInfo,
     loginGitHub,
     logoutGitHub,
+    loginGoogle,
+    logoutGoogle,
     stopServer,
     startServer,
     restartServer
@@ -44,9 +48,11 @@ export default function SettingsPanel() {
   const [expandPrivacy, setExpandPrivacy] = useState(false);
 
   const themes = [
-    { id: 'dark', label: 'Dark Mode' },
-    { id: 'light', label: 'Light Mode' },
-    { id: 'system', label: 'System Default' }
+    { id: 'system', label: 'System' },
+    { id: 'localsend', label: 'LocalSend' },
+    { id: 'oled', label: 'OLED' },
+    { id: 'yaru', label: 'Yaru' },
+    { id: 'light', label: 'Light Mode' }
   ];
 
   const accentColors = [
@@ -75,49 +81,91 @@ export default function SettingsPanel() {
       {/* Settings Rows List */}
       <div className="flex-1 overflow-y-auto pr-2 pb-10 space-y-6">
 
-        {/* SECTION 1: GITHUB INTEGRATION */}
-        <div className="glass-card p-6 border-slate-200/50 dark:border-white/5 space-y-4">
+        {/* SECTION 1: CLOUD INTEGRATIONS */}
+        <div className="glass-card p-6 border-slate-200/50 dark:border-white/5 space-y-5">
           <div className="flex items-center gap-3 border-b border-slate-200/50 dark:border-white/5 pb-3">
-            <Github className="w-5 h-5 text-accent" />
-            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">GitHub Connection</h2>
+            <Globe className="w-5 h-5 text-accent" />
+            <h2 className="text-sm font-semibold text-slate-800 dark:text-slate-200 uppercase tracking-wider">Cloud Integrations</h2>
           </div>
 
-          <div className="flex flex-col gap-4">
-            {githubUser ? (
-              <div className="flex items-center justify-between p-4 rounded-xl bg-accent/5 border border-accent/20">
-                <div className="flex items-center gap-3">
-                  <img
-                    src={githubUser.avatar_url}
-                    alt="GitHub Avatar"
-                    className="w-10 h-10 rounded-full border border-accent/40"
-                  />
-                  <div className="flex flex-col">
-                    <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{githubUser.name || githubUser.username}</span>
-                    <span className="text-xs text-slate-500 dark:text-slate-400">Signed in via GitHub • Fast-Path Tunnel Enabled (+250%)</span>
+          <div className="flex flex-col gap-5 divide-y divide-slate-200/50 dark:divide-white/5">
+            {/* GitHub Integration Row */}
+            <div className="pb-3.5">
+              {githubUser ? (
+                <div className="flex items-center justify-between p-4 rounded-xl bg-accent/5 border border-accent/20">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={githubUser.avatar_url}
+                      alt="GitHub Avatar"
+                      className="w-10 h-10 rounded-full border border-accent/40"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{githubUser.name || githubUser.username}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Signed in via GitHub • Fast-Path Tunnel Enabled (+250%)</span>
+                    </div>
                   </div>
+                  <button
+                    onClick={logoutGitHub}
+                    className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-xs font-semibold transition-colors duration-200"
+                  >
+                    Sign Out
+                  </button>
                 </div>
-                <button
-                  onClick={logoutGitHub}
-                  className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-xs font-semibold transition-colors duration-200"
-                >
-                  Sign Out
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center justify-between py-2.5">
-                <div className="flex flex-col gap-0.5">
-                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">GitHub Link Sharing</span>
-                  <span className="text-[10px] text-slate-500">Sign in to share files via web links and speed up transfers</span>
+              ) : (
+                <div className="flex items-center justify-between py-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">GitHub Link Sharing</span>
+                    <span className="text-[10px] text-slate-500">Sign in to share files via web links and speed up transfers</span>
+                  </div>
+                  <button
+                    onClick={loginGitHub}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-100 border border-slate-800 dark:border-white text-xs font-semibold flex items-center gap-2 transition-all duration-300 hover:shadow-md"
+                  >
+                    <Github className="w-4 h-4" />
+                    Sign In with GitHub
+                  </button>
                 </div>
-                <button
-                  onClick={loginGitHub}
-                  className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-100 border border-slate-800 dark:border-white text-xs font-semibold flex items-center gap-2 transition-all duration-300 hover:shadow-md"
-                >
-                  <Github className="w-4 h-4" />
-                  Sign In with GitHub
-                </button>
-              </div>
-            )}
+              )}
+            </div>
+
+            {/* Google Integration Row */}
+            <div className="pt-4">
+              {googleUser ? (
+                <div className="flex items-center justify-between p-4 rounded-xl bg-accent/5 border border-accent/20">
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={googleUser.avatar_url}
+                      alt="Google Avatar"
+                      className="w-10 h-10 rounded-full border border-accent/40"
+                    />
+                    <div className="flex flex-col">
+                      <span className="text-sm font-semibold text-slate-800 dark:text-slate-200">{googleUser.name}</span>
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Signed in via Google • Cloud Relay Connected</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={logoutGoogle}
+                    className="px-4 py-2 rounded-xl bg-red-500/10 hover:bg-red-500/20 text-red-500 border border-red-500/20 text-xs font-semibold transition-colors duration-200"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between py-1">
+                  <div className="flex flex-col gap-0.5">
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">Google Cloud Relay</span>
+                    <span className="text-[10px] text-slate-500">Sign in with Google to establish outside direct network links</span>
+                  </div>
+                  <button
+                    onClick={loginGoogle}
+                    className="px-4 py-2.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-950 hover:bg-slate-800 dark:hover:bg-slate-100 border border-slate-800 dark:border-white text-xs font-semibold flex items-center gap-2 transition-all duration-300 hover:shadow-md"
+                  >
+                    <Chrome className="w-4 h-4 text-red-500" />
+                    Sign In with Google
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

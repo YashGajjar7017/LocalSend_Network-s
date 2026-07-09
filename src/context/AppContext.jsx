@@ -60,6 +60,7 @@ export const AppProvider = ({ children }) => {
 
   // New additions
   const [githubUser, setGithubUser] = useState(null);
+  const [googleUser, setGoogleUser] = useState(null);
   const [serverState, setServerState] = useState('running');
   const [networkInfo, setNetworkInfo] = useState('Detecting network status...');
 
@@ -74,6 +75,9 @@ export const AppProvider = ({ children }) => {
         }
         if (initSettings.githubUser) {
           setGithubUser(initSettings.githubUser);
+        }
+        if (initSettings.googleUser) {
+          setGoogleUser(initSettings.googleUser);
         }
         
         const initHistory = await window.electronAPI.getHistory();
@@ -105,11 +109,35 @@ export const AppProvider = ({ children }) => {
     root.style.setProperty('--color-accent-glow', `rgba(${colors.primary}, 0.15)`);
 
     // Dynamic Light / Dark mode
+    root.classList.remove('theme-system', 'theme-localsend', 'theme-oled', 'theme-yaru');
+    const isCustomDarkTheme = ['localsend', 'oled', 'yaru'].includes(settings.theme);
     const systemThemeDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    if (settings.theme === 'dark' || (settings.theme === 'system' && systemThemeDark)) {
+    
+    const shouldBeDark = isCustomDarkTheme || settings.theme === 'dark' || (settings.theme === 'system' && systemThemeDark);
+    
+    if (shouldBeDark) {
       root.classList.add('dark');
     } else {
       root.classList.remove('dark');
+    }
+
+    if (isCustomDarkTheme) {
+      root.classList.add(`theme-${settings.theme}`);
+      
+      // Override accent colors for themes that bundle their own accent color
+      if (settings.theme === 'localsend') {
+        root.style.setProperty('--color-accent', '20, 184, 166'); // Teal
+        root.style.setProperty('--color-accent-light', '45, 212, 191');
+        root.style.setProperty('--color-accent-dark', '13, 148, 136');
+        root.style.setProperty('--color-accent-glow', 'rgba(20, 184, 166, 0.15)');
+      } else if (settings.theme === 'yaru') {
+        root.style.setProperty('--color-accent', '233, 84, 32'); // Orange
+        root.style.setProperty('--color-accent-light', '242, 122, 87');
+        root.style.setProperty('--color-accent-dark', '191, 55, 10');
+        root.style.setProperty('--color-accent-glow', 'rgba(233, 84, 32, 0.15)');
+      }
+    } else {
+      root.classList.add('theme-system');
     }
   }, [settings.theme, settings.accentColor]);
 
@@ -389,6 +417,21 @@ export const AppProvider = ({ children }) => {
     updateSettings({ githubUser: null });
   };
 
+  const loginGoogle = async () => {
+    if (window.electronAPI) {
+      const user = await window.electronAPI.googleSignin();
+      if (user) {
+        setGoogleUser(user);
+        updateSettings({ googleUser: user });
+      }
+    }
+  };
+
+  const logoutGoogle = () => {
+    setGoogleUser(null);
+    updateSettings({ googleUser: null });
+  };
+
   const stopServer = async () => {
     setServerState('stopping');
     if (window.electronAPI) {
@@ -462,10 +505,13 @@ export const AppProvider = ({ children }) => {
 
         // GitHub and Server controls
         githubUser,
+        googleUser,
         serverState,
         networkInfo,
         loginGitHub,
         logoutGitHub,
+        loginGoogle,
+        logoutGoogle,
         stopServer,
         startServer,
         restartServer,

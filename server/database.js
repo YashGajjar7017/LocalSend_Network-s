@@ -6,7 +6,7 @@ class LocalDatabase {
     this.dbPath = path.join(userDataPath, 'app_data.json');
     this.data = {
       settings: {
-        theme: 'dark',
+        theme: 'system',
         accentColor: 'cyberpunk', // 'cyberpunk' (purple), 'emerald' (green), 'electric' (blue)
         language: 'en',
         saveWindowStatus: true,
