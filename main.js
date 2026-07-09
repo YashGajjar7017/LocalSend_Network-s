@@ -49,9 +49,11 @@ function initBackend() {
   // Set up auto-start setting
   setAutoStart(settings.autoStart);
 
+  const serverPort = settings.port || 53343;
+
   // Initialize Express Server
   server = new ExpressServer({
-    port: 53343,
+    port: serverPort,
     db: db
   });
 
@@ -78,7 +80,8 @@ function initBackend() {
     deviceId: settings.deviceId,
     deviceName: settings.deviceName,
     deviceType: settings.deviceType,
-    expressPort: 53343
+    expressPort: serverPort,
+    db: db
   });
 
   discovery.on('peers-updated', (peers) => {
@@ -140,6 +143,7 @@ function createWindow() {
     title: 'AirSync',
     backgroundColor: '#020617', // slate-950
     show: false,
+    icon: path.join(__dirname, 'build', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -242,12 +246,220 @@ ipcMain.handle('db-clear-history', () => {
   return true;
 });
 
+ipcMain.handle('server-stop', async () => {
+  try {
+    if (server) server.stop();
+    if (discovery) discovery.stop();
+    return { status: 'stopped' };
+  } catch (e) {
+    return { status: 'error', error: e.message };
+  }
+});
+
+ipcMain.handle('server-start', async () => {
+  try {
+    const settings = db.getSettings();
+    const port = settings.port || 53343;
+    if (server) {
+      server.port = port;
+      const startedPort = await server.start();
+      discovery.expressPort = startedPort;
+      discovery.start();
+      return { status: 'running', port: startedPort };
+    }
+    return { status: 'error', error: 'Server not initialized' };
+  } catch (e) {
+    return { status: 'error', error: e.message };
+  }
+});
+
+ipcMain.handle('server-restart', async () => {
+  try {
+    if (server) server.stop();
+    if (discovery) discovery.stop();
+    
+    await new Promise(r => setTimeout(r, 500));
+    
+    const settings = db.getSettings();
+    const port = settings.port || 53343;
+    if (server) {
+      server.port = port;
+      const startedPort = await server.start();
+      discovery.expressPort = startedPort;
+      discovery.start();
+      return { status: 'running', port: startedPort };
+    }
+    return { status: 'error', error: 'Server not initialized' };
+  } catch (e) {
+    return { status: 'error', error: e.message };
+  }
+});
+
+ipcMain.handle('get-network-info', () => {
+  if (discovery) {
+    const ips = discovery.getLocalIPs();
+    if (ips.length > 0) {
+      return ips.map(ipInfo => `${ipInfo.name}: ${ipInfo.address} (${ipInfo.netmask})`).join(', ');
+    }
+  }
+  return 'No active network connection';
+});
+
+ipcMain.handle('github-signin', async () => {
+  return new Promise((resolve) => {
+    const authWindow = new BrowserWindow({
+      width: 450,
+      height: 600,
+      parent: mainWindow,
+      modal: true,
+      title: 'Sign in with GitHub',
+      show: false,
+      resizable: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    authWindow.setMenuBarVisibility(false);
+
+    const mockHtml = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Sign in with GitHub</title>
+        <style>
+          body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+            background-color: #0d1117;
+            color: #c9d1d9;
+            margin: 0;
+            padding: 40px 24px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+          }
+          .logo {
+            width: 60px;
+            height: 60px;
+            fill: #c9d1d9;
+            margin-bottom: 24px;
+          }
+          h2 {
+            font-size: 20px;
+            font-weight: 400;
+            margin: 0 0 8px 0;
+            color: #f0f6fc;
+          }
+          p {
+            font-size: 14px;
+            color: #8b949e;
+            text-align: center;
+            margin: 0 0 32px 0;
+            line-height: 1.5;
+          }
+          .card {
+            background-color: #161b22;
+            border-radius: 6px;
+            padding: 24px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #30363d;
+          }
+          .btn {
+            background-color: #238636;
+            color: #ffffff;
+            border: 1px solid rgba(240, 246, 252, 0.1);
+            border-radius: 6px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            width: 100%;
+            cursor: pointer;
+            text-align: center;
+          }
+          .btn:hover {
+            background-color: #2ea043;
+          }
+          .btn-cancel {
+            background-color: transparent;
+            color: #58a6ff;
+            border: none;
+            margin-top: 16px;
+            cursor: pointer;
+            font-size: 14px;
+          }
+          .btn-cancel:hover {
+            text-decoration: underline;
+          }
+        </style>
+      </head>
+      <body>
+        <svg class="logo" viewBox="0 0 16 16" version="1.1" aria-hidden="true"><path fill-rule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.57-.18-3.21-.78-3.21-3.48 0-.77.27-1.39.71-1.88-.07-.18-.31-.9.07-1.89 0 0 .59-.19 1.95.73a6.83 6.83 0 013.68 0C12.72 2.1 13.3 2.3 13.3 2.3c.38.99.14 1.71.07 1.89.44.49.71 1.11.71 1.88 0 2.71-1.64 3.29-3.22 3.47.25.22.48.65.48 1.3 0 .93-.01 1.68-.01 1.91 0 .22.15.49.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
+        <h2>Authorize AirSync</h2>
+        <p>AirSync is requesting access to your public GitHub profile to generate secure share links and enable fast peer-to-peer tunnels.</p>
+        <div class="card">
+          <button class="btn" onclick="authorize()">Authorize YashGajjar7017</button>
+          <center><button class="btn-cancel" onclick="cancel()">Cancel</button></center>
+        </div>
+
+        <script>
+          function authorize() {
+            window.location.href = '?auth=success';
+          }
+          function cancel() {
+            window.close();
+          }
+        </script>
+      </body>
+      </html>
+    `;
+
+    authWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(mockHtml));
+
+    authWindow.once('ready-to-show', () => {
+      authWindow.show();
+    });
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      if (url.includes('?auth=success')) {
+        authWindow.close();
+        resolve({
+          username: 'YashGajjar7017',
+          name: 'Yash Gajjar',
+          avatar_url: 'https://avatars.githubusercontent.com/u/70177017?v=4',
+          html_url: 'https://github.com/YashGajjar7017'
+        });
+      }
+    });
+
+    authWindow.on('closed', () => {
+      resolve(null);
+    });
+  });
+});
+
 ipcMain.handle('select-directory', async () => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openDirectory']
   });
   if (result.canceled) return null;
   return result.filePaths[0];
+});
+
+ipcMain.handle('select-file', async () => {
+  const result = await dialog.showOpenDialog(mainWindow, {
+    properties: ['openFile']
+  });
+  if (result.canceled || result.filePaths.length === 0) return null;
+  const filePath = result.filePaths[0];
+  const stats = fs.statSync(filePath);
+  return {
+    path: filePath,
+    name: path.basename(filePath),
+    size: stats.size
+  };
 });
 
 ipcMain.on('open-folder', (event, filePath) => {

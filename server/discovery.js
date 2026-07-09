@@ -10,11 +10,13 @@ class UDPDiscovery extends EventEmitter {
     this.deviceName = options.deviceName || os.hostname();
     this.deviceType = options.deviceType || (os.platform() === 'win32' || os.platform() === 'darwin' ? 'desktop' : 'laptop');
     this.expressPort = options.expressPort || 53343;
+    this.db = options.db;
     
     this.socket = null;
     this.peers = new Map(); // key: deviceId, value: peerInfo
     this.broadcastInterval = null;
     this.cleanupInterval = null;
+    this.timeoutTimer = null;
     this.isScanning = false;
   }
 
@@ -91,10 +93,15 @@ class UDPDiscovery extends EventEmitter {
     });
 
     this.socket.bind(this.port, () => {
+      const settings = this.db ? this.db.getSettings() : {};
+      const timeoutSeconds = settings.discoveryTimeout || 500;
+      const multicastAddr = settings.multicastAddress || '224.0.0.167';
+
       try {
         this.socket.setBroadcast(true);
+        this.socket.addMembership(multicastAddr);
       } catch (e) {
-        console.warn('Could not set socket broadcast, normal discovery might be impacted', e);
+        console.warn('Multicast group membership / broadcast configuration failed:', e);
       }
       this.isScanning = true;
       
@@ -105,6 +112,11 @@ class UDPDiscovery extends EventEmitter {
       // Periodically clean up old peers (haven't heard in 8 seconds)
       this.cleanupInterval = setInterval(() => this.cleanupPeers(), 4000);
       
+      // Auto-stop scanning after timeoutSeconds
+      this.timeoutTimer = setTimeout(() => {
+        this.stop();
+      }, timeoutSeconds * 1000);
+
       this.emit('scanning-state', true);
     });
   }
@@ -114,6 +126,7 @@ class UDPDiscovery extends EventEmitter {
 
     if (this.broadcastInterval) clearInterval(this.broadcastInterval);
     if (this.cleanupInterval) clearInterval(this.cleanupInterval);
+    if (this.timeoutTimer) clearTimeout(this.timeoutTimer);
     
     if (this.socket) {
       try {
@@ -130,6 +143,8 @@ class UDPDiscovery extends EventEmitter {
 
   broadcast() {
     if (!this.socket) return;
+    const settings = this.db ? this.db.getSettings() : {};
+    const multicastAddr = settings.multicastAddress || '224.0.0.167';
 
     const payload = JSON.stringify({
       type: 'announce',
@@ -151,6 +166,9 @@ class UDPDiscovery extends EventEmitter {
         // Broadcast packet
         this.socket.send(buffer, 0, buffer.length, this.port, broadcastAddr);
         
+        // Also send to multicast group
+        this.socket.send(buffer, 0, buffer.length, this.port, multicastAddr);
+
         // Also send direct broadcast to local subnet defaults as safety fallbacks
         this.socket.send(buffer, 0, buffer.length, this.port, '255.255.255.255');
         

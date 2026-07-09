@@ -22,7 +22,13 @@ class LocalDatabase {
         saveToHistory: true,
         windowBounds: { width: 940, height: 680, x: undefined, y: undefined },
         activeTab: 'discovery',
-        favorites: [] // Array of device IDs
+        favorites: [], // Array of device IDs
+        shareViaLinkAutoAccept: false,
+        deviceModel: '',
+        port: 53343,
+        discoveryTimeout: 500,
+        encryptionEnabled: false,
+        multicastAddress: '224.0.0.167'
       },
       history: []
     };

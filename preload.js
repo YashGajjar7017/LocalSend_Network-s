@@ -10,7 +10,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   
   // App Operations
   selectDirectory: () => ipcRenderer.invoke('select-directory'),
+  selectFile: () => ipcRenderer.invoke('select-file'),
   openFolder: (filePath) => ipcRenderer.send('open-folder', filePath),
+  stopServer: () => ipcRenderer.invoke('server-stop'),
+  startServer: () => ipcRenderer.invoke('server-start'),
+  restartServer: () => ipcRenderer.invoke('server-restart'),
+  getNetworkInfo: () => ipcRenderer.invoke('get-network-info'),
+  githubSignin: () => ipcRenderer.invoke('github-signin'),
   
   // File Transfer Control
   selectAndSendFile: (peer) => ipcRenderer.send('select-and-send-file', peer),

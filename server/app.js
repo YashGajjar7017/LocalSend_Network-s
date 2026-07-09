@@ -36,19 +36,20 @@ class ExpressServer {
 
     // 2. Request a file transfer
     this.app.post('/api/transfer/request', (req, res) => {
-      const { senderId, senderName, deviceType, fileName, size, pin } = req.body;
+      const { senderId, senderName, deviceType, fileName, size, pin, isLinkShare } = req.body;
       const settings = this.db.getSettings();
 
-      // Check PIN authentication if enabled
-      if (settings.requirePin) {
+      const isFavorite = settings.favorites.includes(senderId);
+      const shouldAutoAccept = settings.quickSave || 
+                               (settings.quickSaveFavorites && isFavorite) ||
+                               (settings.shareViaLinkAutoAccept && isLinkShare);
+
+      // Check PIN authentication if enabled (bypass if auto-accepted via link share)
+      if (settings.requirePin && !shouldAutoAccept) {
         if (!pin || pin !== settings.pinCode) {
           return res.status(403).json({ status: 'rejected', reason: 'Invalid PIN' });
         }
       }
-
-      // If Quick Save is enabled for all, or if this is a favorite/trusted device (and quickSaveFavorites is enabled)
-      const isFavorite = settings.favorites.includes(senderId);
-      const shouldAutoAccept = settings.quickSave || (settings.quickSaveFavorites && isFavorite);
 
       const transferId = 'tx_' + Math.random().toString(36).substr(2, 9);
       

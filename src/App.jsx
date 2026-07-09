@@ -26,7 +26,7 @@ function MainLayout() {
   };
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-slate-950 font-sans text-slate-100 relative">
+    <div className="flex h-screen w-screen overflow-hidden bg-slate-50 dark:bg-slate-950 font-sans text-slate-800 dark:text-slate-100 transition-colors duration-300 relative">
       
       {/* Liquid fluid background */}
       <div className="liquid-bg">
@@ -39,10 +39,10 @@ function MainLayout() {
       <Sidebar />
 
       {/* Main Content Dashboard */}
-      <main className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-950 via-slate-900/60 to-slate-950 relative overflow-hidden">
+      <main className="flex-1 flex flex-col h-full bg-gradient-to-br from-slate-50 via-slate-100/60 to-slate-50 dark:from-slate-950 dark:via-slate-900/60 dark:to-slate-950 relative overflow-hidden transition-all duration-300">
         
         {/* Abstract futuristic background grid vectors */}
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35 pointer-events-none" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,#e2e8f0_1px,transparent_1px),linear-gradient(to_bottom,#e2e8f0_1px,transparent_1px)] dark:bg-[linear-gradient(to_right,#0f172a_1px,transparent_1px),linear-gradient(to_bottom,#0f172a_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)] opacity-35 pointer-events-none" />
 
         {renderActiveTab()}
       </main>

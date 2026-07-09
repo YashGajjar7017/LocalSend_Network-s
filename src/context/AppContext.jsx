@@ -58,6 +58,11 @@ export const AppProvider = ({ children }) => {
   const [bluetoothHandshakeState, setBluetoothHandshakeState] = useState('idle'); // 'idle', 'pairing', 'success', 'failed'
   const [bluetoothPairingDevice, setBluetoothPairingDevice] = useState(null);
 
+  // New additions
+  const [githubUser, setGithubUser] = useState(null);
+  const [serverState, setServerState] = useState('running');
+  const [networkInfo, setNetworkInfo] = useState('Detecting network status...');
+
   // 1. Initial configuration load
   useEffect(() => {
     async function loadConfig() {
@@ -67,6 +72,9 @@ export const AppProvider = ({ children }) => {
         if (initSettings.activeTab) {
           setActiveTab(initSettings.activeTab);
         }
+        if (initSettings.githubUser) {
+          setGithubUser(initSettings.githubUser);
+        }
         
         const initHistory = await window.electronAPI.getHistory();
         setHistory(initHistory);
@@ -74,6 +82,17 @@ export const AppProvider = ({ children }) => {
     }
     loadConfig();
   }, []);
+
+  // Fetch local network IP and interface info
+  useEffect(() => {
+    async function fetchNetwork() {
+      if (window.electronAPI) {
+        const info = await window.electronAPI.getNetworkInfo();
+        setNetworkInfo(info);
+      }
+    }
+    fetchNetwork();
+  }, [serverState]);
 
   // 2. React to theme & accent changes dynamically
   useEffect(() => {
@@ -322,6 +341,57 @@ export const AppProvider = ({ children }) => {
     updateSettings({ favorites: list });
   };
 
+  const loginGitHub = async () => {
+    if (window.electronAPI) {
+      const user = await window.electronAPI.githubSignin();
+      if (user) {
+        setGithubUser(user);
+        updateSettings({ githubUser: user });
+      }
+    }
+  };
+
+  const logoutGitHub = () => {
+    setGithubUser(null);
+    updateSettings({ githubUser: null });
+  };
+
+  const stopServer = async () => {
+    setServerState('stopping');
+    if (window.electronAPI) {
+      const res = await window.electronAPI.stopServer();
+      if (res.status === 'stopped') {
+        setServerState('stopped');
+      } else {
+        setServerState('error');
+      }
+    }
+  };
+
+  const startServer = async () => {
+    setServerState('starting');
+    if (window.electronAPI) {
+      const res = await window.electronAPI.startServer();
+      if (res.status === 'running') {
+        setServerState('running');
+      } else {
+        setServerState('error');
+      }
+    }
+  };
+
+  const restartServer = async () => {
+    setServerState('restarting');
+    if (window.electronAPI) {
+      const res = await window.electronAPI.restartServer();
+      if (res.status === 'running') {
+        setServerState('running');
+      } else {
+        setServerState('error');
+      }
+    }
+  };
+
   return (
     <AppContext.Provider
       value={{
@@ -355,7 +425,17 @@ export const AppProvider = ({ children }) => {
         startBluetoothScan,
         stopBluetoothScan,
         pairBluetoothDevice,
-        setBluetoothHandshakeState
+        setBluetoothHandshakeState,
+
+        // GitHub and Server controls
+        githubUser,
+        serverState,
+        networkInfo,
+        loginGitHub,
+        logoutGitHub,
+        stopServer,
+        startServer,
+        restartServer
       }}
     >
       {children}
