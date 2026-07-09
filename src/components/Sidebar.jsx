@@ -1,15 +1,15 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Wifi, Bluetooth, History, Settings } from 'lucide-react';
+import { Wifi, Bluetooth, History, Settings, Send } from 'lucide-react';
 import LogoIcon from '../assets/logo.png';
 
 export default function Sidebar() {
   const { activeTab, setActiveTab, settings } = useApp();
 
   const menuItems = [
-    { id: 'discovery', label: 'Local Discovery', icon: Wifi },
+    { id: 'receive', label: 'Receive', icon: Wifi },
+    { id: 'send', label: 'Send', icon: Send },
     { id: 'bluetooth', label: 'Bluetooth Share', icon: Bluetooth },
-    { id: 'history', label: 'Transfer History', icon: History },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

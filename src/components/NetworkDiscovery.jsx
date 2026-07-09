@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function NetworkDiscovery() {
-  const { peers, isScanning, triggerFileSend, toggleFavorite, settings, githubUser } = useApp();
+  const { peers, isScanning, triggerFileSend, toggleFavorite, settings, githubUser, connectToDirectIp } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   
   // Link sharing state
@@ -32,6 +32,13 @@ export default function NetworkDiscovery() {
   const [prevPeerCount, setPrevPeerCount] = useState(peers.length);
   const [showPeerToast, setShowPeerToast] = useState(false);
   const [lastDetectedPeer, setLastDetectedPeer] = useState(null);
+
+  // Direct IP connect state
+  const [showDirectConnectModal, setShowDirectConnectModal] = useState(false);
+  const [directIp, setDirectIp] = useState('');
+  const [directPort, setDirectPort] = useState('53343');
+  const [directStatus, setDirectStatus] = useState('idle'); // 'idle', 'connecting', 'success', 'error'
+  const [directError, setDirectError] = useState('');
 
   // Monitor peers length to fire a visual toast notification
   useEffect(() => {
@@ -110,6 +117,25 @@ export default function NetworkDiscovery() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleDirectConnect = async (e) => {
+    e.preventDefault();
+    if (!directIp) return;
+    setDirectStatus('connecting');
+    setDirectError('');
+    const res = await connectToDirectIp(directIp, directPort);
+    if (res.success) {
+      setDirectStatus('success');
+      setTimeout(() => {
+        setShowDirectConnectModal(false);
+        setDirectStatus('idle');
+        setDirectIp('');
+      }, 1500);
+    } else {
+      setDirectStatus('error');
+      setDirectError(res.reason || 'Failed to link node');
+    }
+  };
+
   const filteredPeers = peers.filter(peer => 
     peer.deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     peer.ip.includes(searchTerm)
@@ -142,7 +168,7 @@ export default function NetworkDiscovery() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-850 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">
-            Local Discovery
+            Send File
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             Send and receive files with devices on your Wi-Fi or local network.
@@ -248,7 +274,7 @@ export default function NetworkDiscovery() {
         )}
       </div>
 
-      {/* Search / Filters Bar */}
+      {/* Search / Filters Bar & Direct Connect Button */}
       <div className="flex items-center gap-4 mb-6">
         <div className="flex-1 relative">
           <Search className="w-4 h-4 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2" />
@@ -260,6 +286,13 @@ export default function NetworkDiscovery() {
             className="w-full bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-xl py-2.5 pl-11 pr-4 text-sm text-slate-800 dark:text-slate-100 placeholder-slate-500 focus:outline-none focus:border-accent/40 transition-all duration-300"
           />
         </div>
+        <button
+          onClick={() => setShowDirectConnectModal(true)}
+          className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-950 border border-slate-300 dark:border-white/10 hover:border-accent/40 hover:bg-slate-300 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-2 transition-all duration-300 hover:shadow-md shrink-0"
+        >
+          <Globe className="w-4 h-4 text-accent" />
+          Direct Connect
+        </button>
       </div>
 
       {/* Grid of Devices */}
@@ -272,7 +305,7 @@ export default function NetworkDiscovery() {
             </div>
             <p className="text-sm text-slate-600 dark:text-slate-300 font-medium">Looking for active peers</p>
             <p className="text-xs text-slate-400 dark:text-slate-500 mt-1 max-w-xs text-center">
-              Ensure the app is open on other devices connected to the same Wi-Fi subnet.
+              Ensure the app is open on other devices connected to the same Wi-Fi subnet or use Direct Connect.
             </p>
           </div>
         ) : (
@@ -324,6 +357,9 @@ export default function NetworkDiscovery() {
                         {isFavorite && (
                           <ShieldCheck className="w-3.5 h-3.5 text-accent animate-pulse" />
                         )}
+                        {peer.isDirect && (
+                          <span className="text-[8px] bg-accent/20 text-accent font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">Direct</span>
+                        )}
                       </div>
                       <span className="text-xs font-mono text-slate-500 block mt-1">{peer.ip}</span>
                     </div>
@@ -341,6 +377,81 @@ export default function NetworkDiscovery() {
           </motion.div>
         )}
       </div>
+
+      {/* Direct Connect Dialog Modal */}
+      {showDirectConnectModal && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-50 p-6 animate-fade-in">
+          <div className="glass-card max-w-sm w-full p-6 border-slate-200 dark:border-white/10 shadow-2xl relative bg-white/95 dark:bg-[#333] text-left">
+            <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-4 text-center">
+              Direct IP Connection
+            </h3>
+            
+            <form onSubmit={handleDirectConnect} className="space-y-4 text-left">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">IP Address</label>
+                <input
+                  type="text"
+                  required
+                  placeholder="e.g. 192.168.1.100 or 12.34.56.78"
+                  value={directIp}
+                  onChange={(e) => setDirectIp(e.target.value)}
+                  className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-white/5 rounded-xl px-4 py-2 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-accent/40 w-full"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Port Number</label>
+                <input
+                  type="number"
+                  required
+                  placeholder="53343"
+                  value={directPort}
+                  onChange={(e) => setDirectPort(e.target.value)}
+                  className="bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-white/5 rounded-xl px-4 py-2 text-xs text-slate-800 dark:text-slate-100 focus:outline-none focus:border-accent/40 w-full"
+                />
+              </div>
+
+              {directStatus === 'error' && (
+                <div className="text-[10px] text-red-500 font-semibold bg-red-500/10 p-2.5 rounded-lg border border-red-500/20">
+                  Error: {directError}
+                </div>
+              )}
+
+              {directStatus === 'success' && (
+                <div className="text-[10px] text-emerald-500 font-semibold bg-emerald-500/10 p-2.5 rounded-lg border border-emerald-500/20 text-center animate-pulse">
+                  Connection Established!
+                </div>
+              )}
+
+              <div className="flex gap-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowDirectConnectModal(false);
+                    setDirectStatus('idle');
+                    setDirectError('');
+                  }}
+                  className="flex-1 py-2 rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-white/10 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-200 dark:hover:bg-slate-900 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={directStatus === 'connecting'}
+                  className="flex-1 py-2 bg-accent text-slate-950 rounded-xl text-xs font-bold hover:bg-accent-light transition-colors flex items-center justify-center gap-1.5"
+                >
+                  {directStatus === 'connecting' ? (
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    'Connect'
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

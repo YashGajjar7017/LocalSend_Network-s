@@ -39,7 +39,7 @@ function initBackend() {
     settings.deviceName = os.hostname();
     db.updateSettings({ deviceName: settings.deviceName });
   }
-  
+
   // Set default downloads directory if empty
   if (!settings.saveFolder) {
     settings.saveFolder = path.join(os.homedir(), 'Downloads');
@@ -106,10 +106,12 @@ function createTray() {
   const contextMenu = Menu.buildFromTemplate([
     { label: 'Open AirSync', click: () => { if (mainWindow) mainWindow.show(); } },
     { type: 'separator' },
-    { label: 'Quit AirSync', click: () => {
-      app.isQuitting = true;
-      app.quit();
-    }}
+    {
+      label: 'Quit AirSync', click: () => {
+        app.isQuitting = true;
+        app.quit();
+      }
+    }
   ]);
   tray.setToolTip('AirSync - Local Share');
   tray.setContextMenu(contextMenu);
@@ -180,7 +182,7 @@ function createWindow() {
 
   mainWindow.on('close', (event) => {
     const freshSettings = db.getSettings();
-    
+
     // Save window size and position if configured
     if (freshSettings.saveWindowStatus) {
       const currentBounds = mainWindow.getBounds();
@@ -219,12 +221,12 @@ ipcMain.handle('db-get-settings', () => {
 
 ipcMain.handle('db-update-settings', (event, newSettings) => {
   const updated = db.updateSettings(newSettings);
-  
+
   // Sync changed names or types to active discovery process
   if (newSettings.deviceName || newSettings.deviceType) {
     discovery.updateDeviceInfo(newSettings.deviceName, newSettings.deviceType);
   }
-  
+
   // Update auto-start setting dynamically
   if (newSettings.autoStart !== undefined) {
     setAutoStart(newSettings.autoStart);
@@ -277,9 +279,9 @@ ipcMain.handle('server-restart', async () => {
   try {
     if (server) server.stop();
     if (discovery) discovery.stop();
-    
+
     await new Promise(r => setTimeout(r, 500));
-    
+
     const settings = db.getSettings();
     const port = settings.port || 53343;
     if (server) {
@@ -400,7 +402,7 @@ ipcMain.handle('github-signin', async () => {
         <h2>Authorize AirSync</h2>
         <p>AirSync is requesting access to your public GitHub profile to generate secure share links and enable fast peer-to-peer tunnels.</p>
         <div class="card">
-          <button class="btn" onclick="authorize()">Authorize YashGajjar7017</button>
+          <button class="btn" onclick="authorize()">Authorize GithubUserData</button>
           <center><button class="btn-cancel" onclick="cancel()">Cancel</button></center>
         </div>
 
@@ -426,10 +428,10 @@ ipcMain.handle('github-signin', async () => {
       if (url.includes('?auth=success')) {
         authWindow.close();
         resolve({
-          username: 'YashGajjar7017',
+          username: 'GithubUserData',
           name: 'Yash Gajjar',
           avatar_url: 'https://avatars.githubusercontent.com/u/70177017?v=4',
-          html_url: 'https://github.com/YashGajjar7017'
+          html_url: 'https://github.com/GithubUserData'
         });
       }
     });
@@ -473,9 +475,9 @@ ipcMain.on('select-and-send-file', async (event, peer) => {
   const result = await dialog.showOpenDialog(mainWindow, {
     properties: ['openFile']
   });
-  
+
   if (result.canceled || result.filePaths.length === 0) return;
-  
+
   const filePath = result.filePaths[0];
   sendFileToPeer(peer, filePath);
 });
@@ -483,7 +485,7 @@ ipcMain.on('select-and-send-file', async (event, peer) => {
 // Implementation of streaming HTTP client for Outgoing file uploads
 async function sendFileToPeer(peer, filePath) {
   const transferId = 'tx_' + Math.random().toString(36).substr(2, 9);
-  
+
   try {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
@@ -550,7 +552,7 @@ async function sendFileToPeer(peer, filePath) {
     const startTime = Date.now();
 
     const progressStream = new Readable({
-      read() {}
+      read() { }
     });
 
     fileStream.on('data', (chunk) => {
@@ -611,7 +613,7 @@ async function sendFileToPeer(peer, filePath) {
       transferId,
       reason: error.message
     });
-    
+
     // Add failed entry to history
     try {
       const stats = fs.statSync(filePath);
@@ -625,7 +627,7 @@ async function sendFileToPeer(peer, filePath) {
         direction: 'outgoing'
       };
       db.addHistoryEntry(historyEntry);
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -643,7 +645,7 @@ const mockBluetoothDevices = [
 
 ipcMain.on('bluetooth-start-scan', (event) => {
   if (bluetoothScanTimer) clearInterval(bluetoothScanTimer);
-  
+
   // Simulate discoverable devices showing up in waves to create a dynamic feel
   let idx = 0;
   bluetoothScanTimer = setInterval(() => {

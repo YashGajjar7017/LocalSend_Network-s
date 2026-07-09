@@ -330,6 +330,39 @@ export const AppProvider = ({ children }) => {
   };
 
   // Toggle favorite device ID
+  const [directPeers, setDirectPeers] = useState([]);
+
+  const connectToDirectIp = async (ip, port) => {
+    try {
+      const response = await fetch(`http://${ip}:${port}/api/device-info`, {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(5000)
+      });
+      if (response.ok) {
+        const data = await response.json();
+        const directPeer = {
+          deviceId: data.deviceId,
+          deviceName: data.deviceName,
+          deviceType: data.deviceType,
+          os: data.os || 'Unknown',
+          expressPort: parseInt(port),
+          ip: ip,
+          lastSeen: Date.now(),
+          isDirect: true
+        };
+        setDirectPeers(prev => {
+          const list = prev.filter(p => p.deviceId !== directPeer.deviceId);
+          return [...list, directPeer];
+        });
+        return { success: true, device: directPeer };
+      }
+      return { success: false, reason: `Device returned code: ${response.status}` };
+    } catch (e) {
+      return { success: false, reason: 'Device did not respond or network unreachable' };
+    }
+  };
+
   const toggleFavorite = (deviceId) => {
     const list = [...settings.favorites];
     const index = list.indexOf(deviceId);
@@ -399,7 +432,7 @@ export const AppProvider = ({ children }) => {
         updateSettings,
         activeTab,
         setActiveTab: changeTab,
-        peers,
+        peers: [...peers, ...directPeers.filter(dp => !peers.some(p => p.deviceId === dp.deviceId))],
         isScanning,
         history,
         clearHistory,
@@ -435,7 +468,8 @@ export const AppProvider = ({ children }) => {
         logoutGitHub,
         stopServer,
         startServer,
-        restartServer
+        restartServer,
+        connectToDirectIp
       }}
     >
       {children}
