@@ -20,8 +20,13 @@ import {
 } from 'lucide-react';
 
 export default function NetworkDiscovery() {
-  const { peers, isScanning, triggerFileSend, toggleFavorite, settings, githubUser, connectToDirectIp } = useApp();
+  const { peers, isScanning, triggerFileSend, toggleFavorite, settings, githubUser, connectToDirectIp, networkInfo } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
+  const [showNetworkWarning, setShowNetworkWarning] = useState(false);
+
+  const isNetworkConnected = networkInfo && 
+                             networkInfo !== 'No active network connection' && 
+                             !networkInfo.includes('Detecting');
   
   // Link sharing state
   const [linkFile, setLinkFile] = useState(null);
@@ -83,6 +88,11 @@ export default function NetworkDiscovery() {
   };
 
   const handleSelectLinkFile = async () => {
+    if (!isNetworkConnected) {
+      setShowNetworkWarning(true);
+      setTimeout(() => setShowNetworkWarning(false), 5000);
+      return;
+    }
     if (!window.electronAPI) return;
     const file = await window.electronAPI.selectFile();
     if (file) {
@@ -142,8 +152,34 @@ export default function NetworkDiscovery() {
   );
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden p-8 select-none relative">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 select-none relative pb-20 md:pb-8">
       
+      {/* Network Alert Warning */}
+      <AnimatePresence>
+        {showNetworkWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="absolute top-6 left-6 right-6 mx-auto max-w-md z-50 glass border-red-500/20 bg-red-500/10 text-red-200 p-4 rounded-xl shadow-xl flex items-center gap-3 border"
+          >
+            <div className="p-2 bg-red-500/20 text-red-500 rounded-lg shrink-0">
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="flex-1">
+              <span className="text-xs font-bold block">Network isn't selected</span>
+              <span className="text-[10px] text-slate-400 block mt-0.5">Please check your Wi-Fi connection. You must be connected to a network to share files.</span>
+            </div>
+            <button 
+              onClick={() => setShowNetworkWarning(false)}
+              className="text-[10px] bg-red-500/20 hover:bg-red-500/40 text-red-200 font-bold px-2.5 py-1 rounded-md"
+            >
+              OK
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Visual Toast Notification on Peer Detection */}
       <AnimatePresence>
         {showPeerToast && lastDetectedPeer && (
@@ -156,7 +192,7 @@ export default function NetworkDiscovery() {
             <div className="p-2 bg-emerald-500/20 text-emerald-500 rounded-lg animate-bounce">
               <Zap className="w-5 h-5" />
             </div>
-            <div className="flex flex-col">
+            <div className="flex-col">
               <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Device Node Detected</span>
               <span className="text-[10px] text-slate-500 dark:text-slate-400">"{lastDetectedPeer.deviceName}" has joined the active network.</span>
             </div>
@@ -287,7 +323,14 @@ export default function NetworkDiscovery() {
           />
         </div>
         <button
-          onClick={() => setShowDirectConnectModal(true)}
+          onClick={() => {
+            if (!isNetworkConnected) {
+              setShowNetworkWarning(true);
+              setTimeout(() => setShowNetworkWarning(false), 5000);
+              return;
+            }
+            setShowDirectConnectModal(true);
+          }}
           className="px-4 py-2.5 rounded-xl bg-slate-200 dark:bg-slate-950 border border-slate-300 dark:border-white/10 hover:border-accent/40 hover:bg-slate-300 dark:hover:bg-slate-900 text-slate-700 dark:text-slate-300 text-xs font-semibold flex items-center gap-2 transition-all duration-300 hover:shadow-md shrink-0"
         >
           <Globe className="w-4 h-4 text-accent" />
@@ -311,7 +354,7 @@ export default function NetworkDiscovery() {
         ) : (
           <motion.div 
             layout
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
           >
             <AnimatePresence>
               {filteredPeers.map((peer) => {
@@ -327,7 +370,14 @@ export default function NetworkDiscovery() {
                     exit={{ opacity: 0, scale: 0.95, y: -15 }}
                     transition={{ type: 'spring', stiffness: 350, damping: 25 }}
                     className="glass-card hover:bg-white/80 dark:hover:bg-slate-900/60 neon-border-hover p-5 flex flex-col justify-between group cursor-pointer relative overflow-hidden"
-                    onClick={() => triggerFileSend(peer)}
+                    onClick={() => {
+                      if (!isNetworkConnected) {
+                        setShowNetworkWarning(true);
+                        setTimeout(() => setShowNetworkWarning(false), 5000);
+                        return;
+                      }
+                      triggerFileSend(peer);
+                    }}
                   >
                     {/* Glass shimmer background effect */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />

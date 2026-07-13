@@ -69,7 +69,7 @@ export default function SettingsPanel() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 select-none">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:to-slate-400 bg-clip-text text-transparent">

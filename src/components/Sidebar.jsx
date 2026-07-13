@@ -14,7 +14,7 @@ export default function Sidebar() {
   ];
 
   return (
-    <div className="w-64 glass-panel flex flex-col h-screen select-none transition-colors duration-300">
+    <div className="hidden md:flex w-64 glass-panel flex-col h-screen select-none transition-colors duration-300">
       {/* App Branding */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-200 dark:border-white/5 titlebar-drag">
         <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-accent dark:to-accent-light shadow-md shadow-accent/10 dark:shadow-accent/20">

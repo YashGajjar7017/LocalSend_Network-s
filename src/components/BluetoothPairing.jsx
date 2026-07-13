@@ -20,6 +20,10 @@ export default function BluetoothPairing() {
   } = useApp();
 
   const [verificationCode, setVerificationCode] = useState('');
+  const [localReceiveCode, setLocalReceiveCode] = useState('');
+  const [inputCode, setInputCode] = useState('');
+  const [codeStatus, setCodeStatus] = useState('idle'); // 'idle', 'connecting', 'success', 'error'
+  const [codeError, setCodeError] = useState('');
   
   // Simulated transfer states
   const [transferState, setTransferState] = useState('idle'); // 'idle', 'selecting', 'sending', 'completed'
@@ -34,7 +38,16 @@ export default function BluetoothPairing() {
     { name: 'Backup_Database.db', size: 19293798, displaySize: '18.4 MB' }
   ];
 
-  // Generate pairing code
+  // Auto-scan on mount/tab activation
+  useEffect(() => {
+    startBluetoothScan();
+    setLocalReceiveCode(Math.floor(200000 + Math.random() * 700000).toString());
+    return () => {
+      stopBluetoothScan();
+    };
+  }, []);
+
+  // Generate pairing code for remote device pairing trigger
   useEffect(() => {
     if (bluetoothHandshakeState === 'pairing') {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
@@ -116,11 +129,35 @@ export default function BluetoothPairing() {
     setTransferState('sending');
   };
 
+  const handleCodeSubmit = (e) => {
+    e.preventDefault();
+    if (inputCode.length !== 6) {
+      setCodeError('Code must be exactly 6 digits');
+      setCodeStatus('error');
+      return;
+    }
+    
+    setCodeStatus('connecting');
+    setCodeError('');
+    setTimeout(() => {
+      setCodeStatus('success');
+      
+      // Simulate receiving file via code
+      setTimeout(() => {
+        setActiveDevice({ id: 'bt_code_node', name: 'Code Shared Phone', type: 'mobile' });
+        setSelectedFile({ name: 'Bluetooth_Document_Shared.pdf', size: 10485760, displaySize: '10.0 MB' });
+        setTransferState('sending');
+        setCodeStatus('idle');
+        setInputCode('');
+      }, 1200);
+    }, 1800);
+  };
+
   return (
-    <div className="flex-1 flex h-screen overflow-hidden select-none">
+    <div className="flex-1 flex flex-col lg:flex-row h-full overflow-y-auto select-none pb-20 lg:pb-0">
       
       {/* LEFT COLUMN: Animated Radar Screen */}
-      <div className="w-1/2 flex flex-col items-center justify-center p-8 border-r border-white/5 relative bg-slate-950/20">
+      <div className="w-full lg:w-1/2 flex flex-col items-center justify-center p-6 lg:p-8 border-b lg:border-b-0 lg:border-r border-white/5 relative bg-slate-950/20">
         
         {/* Title area */}
         <div className="absolute top-8 left-8">
@@ -209,16 +246,16 @@ export default function BluetoothPairing() {
       </div>
 
       {/* RIGHT COLUMN: Device List / Handshake / Transfer Simulator */}
-      <div className="w-1/2 flex flex-col h-screen overflow-hidden p-8 bg-slate-950/40">
+      <div className="w-full lg:w-1/2 flex flex-col p-6 lg:p-8 bg-slate-950/40 min-h-[450px]">
         
         {/* VIEW 1: Idle list */}
         {bluetoothHandshakeState === 'idle' && transferState === 'idle' && (
-          <div className="flex-1 flex flex-col h-full overflow-hidden">
+          <div className="flex-1 flex flex-col h-full">
             <h2 className="text-sm font-semibold text-slate-400 uppercase tracking-widest mb-4">
               Discovered Peripherals
             </h2>
 
-            <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+            <div className="flex-1 overflow-y-auto space-y-4 pr-2 max-h-[250px] min-h-[120px]">
               {bluetoothDevices.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center text-slate-500">
                   <p className="text-xs">No bluetooth devices discoverable.</p>
@@ -266,6 +303,58 @@ export default function BluetoothPairing() {
                   );
                 })
               )}
+            </div>
+
+            {/* Bluetooth Code Share panel */}
+            <div className="glass-card p-4 border-white/5 bg-slate-900/60 mt-6 space-y-4">
+              <div className="flex items-center justify-between border-b border-white/5 pb-2">
+                <span className="text-xs font-bold text-accent uppercase tracking-widest">Receive via Code</span>
+                <span className="text-[10px] font-mono px-2 py-0.5 bg-accent/15 border border-accent/30 text-accent rounded-md">
+                  Active
+                </span>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center justify-between bg-slate-950/60 p-3 rounded-xl border border-white/5">
+                  <span className="text-[10px] text-slate-400 font-bold uppercase">Your Receive Code</span>
+                  <span className="text-sm font-mono font-bold tracking-widest text-accent">{localReceiveCode}</span>
+                </div>
+                <form onSubmit={handleCodeSubmit} className="space-y-3">
+                  <div className="flex flex-col gap-1">
+                    <label className="text-[9px] font-bold text-slate-500 uppercase">Enter Sender's 6-Digit Code</label>
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        required
+                        placeholder="e.g. 524981"
+                        value={inputCode}
+                        onChange={(e) => {
+                          const val = e.target.value.replace(/[^0-9]/g, '');
+                          setInputCode(val);
+                        }}
+                        className="flex-1 bg-slate-950 border border-white/10 rounded-xl px-3 py-1.5 font-mono text-center font-bold text-sm text-white tracking-widest focus:outline-none focus:border-accent/40"
+                      />
+                      <button
+                        type="submit"
+                        disabled={codeStatus === 'connecting'}
+                        className="px-4 py-1.5 bg-accent text-slate-950 rounded-xl text-xs font-bold hover:bg-accent-light transition-colors disabled:opacity-50 shrink-0"
+                      >
+                        {codeStatus === 'connecting' ? 'Linking...' : 'Connect'}
+                      </button>
+                    </div>
+                  </div>
+                  {codeStatus === 'error' && (
+                    <div className="text-[10px] text-red-400 font-semibold bg-red-500/10 p-2 rounded-lg border border-red-500/20">
+                      {codeError}
+                    </div>
+                  )}
+                  {codeStatus === 'success' && (
+                    <div className="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 p-2 rounded-lg border border-emerald-500/20 text-center animate-pulse">
+                      Code Verified! Establishing link...
+                    </div>
+                  )}
+                </form>
+              </div>
             </div>
           </div>
         )}

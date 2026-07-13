@@ -36,7 +36,7 @@ class ExpressServer {
 
     // 2. Request a file transfer
     this.app.post('/api/transfer/request', (req, res) => {
-      const { senderId, senderName, deviceType, fileName, size, pin, isLinkShare } = req.body;
+      const { senderId, senderName, deviceType, fileName, size, pin, isLinkShare, encrypted, key, iv } = req.body;
       const settings = this.db.getSettings();
 
       const isFavorite = settings.favorites.includes(senderId);
@@ -61,7 +61,10 @@ class ExpressServer {
         fileName,
         size: parseInt(size, 10),
         isFavorite,
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        encrypted: !!encrypted,
+        key: key || null,
+        iv: iv || null
       };
 
       if (shouldAutoAccept) {
@@ -97,13 +100,31 @@ class ExpressServer {
       }
 
       const session = this.activeUploads.get(transferId);
-      const { targetPath, totalBytes } = session;
+      const { targetPath, totalBytes, encrypted, key, iv } = session;
       
       const writeStream = fs.createWriteStream(targetPath);
       session.writeStream = writeStream;
       session.startTime = Date.now();
 
-      req.pipe(writeStream);
+      const crypto = require('crypto');
+      let decipher = null;
+      if (encrypted && key && iv) {
+        try {
+          decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key, 'hex'), Buffer.from(iv, 'hex'));
+        } catch (err) {
+          console.error('Failed to create decipher:', err);
+        }
+      }
+
+      if (decipher) {
+        decipher.on('error', (err) => {
+          console.error('Decryption stream error:', err);
+          writeStream.destroy(err);
+        });
+        req.pipe(decipher).pipe(writeStream);
+      } else {
+        req.pipe(writeStream);
+      }
 
       req.on('data', (chunk) => {
         session.bytesReceived += chunk.length;
@@ -220,7 +241,10 @@ class ExpressServer {
         targetPath: finalPath,
         bytesReceived: 0,
         totalBytes: fileDetails.size,
-        senderName: fileDetails.senderName
+        senderName: fileDetails.senderName,
+        encrypted: fileDetails.encrypted,
+        key: fileDetails.key,
+        iv: fileDetails.iv
       });
 
       res.json({
@@ -276,12 +300,16 @@ class ExpressServer {
 
   start() {
     return new Promise((resolve, reject) => {
-      this.serverInstance = this.app.listen(this.port, () => {
+      const server = this.app.listen(this.port, () => {
+        this.serverInstance = server;
         resolve(this.port);
-      }).on('error', (err) => {
+      });
+
+      server.on('error', (err) => {
         if (err.code === 'EADDRINUSE') {
-          // If port is in use, try next ports dynamically
+          console.log(`Port ${this.port} in use, trying next port...`);
           this.port++;
+          server.close();
           this.start().then(resolve).catch(reject);
         } else {
           reject(err);

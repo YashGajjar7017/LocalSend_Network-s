@@ -99,7 +99,15 @@ class UDPDiscovery extends EventEmitter {
 
       try {
         this.socket.setBroadcast(true);
-        this.socket.addMembership(multicastAddr);
+        const localIPs = this.getLocalIPs();
+        for (const ipInfo of localIPs) {
+          try {
+            this.socket.addMembership(multicastAddr, ipInfo.address);
+            console.log(`Joined multicast ${multicastAddr} on interface ${ipInfo.address}`);
+          } catch (err) {
+            console.warn(`Failed to join multicast on interface ${ipInfo.address}:`, err.message);
+          }
+        }
       } catch (e) {
         console.warn('Multicast group membership / broadcast configuration failed:', e);
       }

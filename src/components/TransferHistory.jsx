@@ -61,7 +61,7 @@ export default function TransferHistory() {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden p-8 select-none">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 select-none">
       
       {/* Header */}
       <div className="flex items-center justify-between mb-8">

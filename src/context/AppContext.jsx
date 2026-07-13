@@ -36,6 +36,7 @@ export const AppProvider = ({ children }) => {
     saveFolder: '',
     autoFinish: true,
     saveToHistory: true,
+    encryptionEnabled: false,
     favorites: []
   });
 

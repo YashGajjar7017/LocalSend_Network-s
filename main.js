@@ -65,16 +65,6 @@ function initBackend() {
     }
   });
 
-  // Start Express Server
-  server.start().then((port) => {
-    console.log(`Express server running on port: ${port}`);
-    // Update discovery with binding port
-    discovery.expressPort = port;
-    discovery.start();
-  }).catch((err) => {
-    console.error('Failed to start Express server:', err);
-  });
-
   // Initialize UDP Discovery
   discovery = new UDPDiscovery({
     port: 53344,
@@ -95,6 +85,16 @@ function initBackend() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('scanning-state', isScanning);
     }
+  });
+
+  // Start Express Server
+  server.start().then((port) => {
+    console.log(`Express server running on port: ${port}`);
+    // Update discovery with binding port
+    discovery.expressPort = port;
+    discovery.start();
+  }).catch((err) => {
+    console.error('Failed to start Express server:', err);
   });
 }
 
@@ -632,12 +632,25 @@ ipcMain.on('select-and-send-file', async (event, peer) => {
 // Implementation of streaming HTTP client for Outgoing file uploads
 async function sendFileToPeer(peer, filePath) {
   const transferId = 'tx_' + Math.random().toString(36).substr(2, 9);
+  const crypto = require('crypto');
 
   try {
     const stats = fs.statSync(filePath);
     const fileName = path.basename(filePath);
     const size = stats.size;
     const settings = db.getSettings();
+
+    let encryptionKeyHex = null;
+    let encryptionIvHex = null;
+    let cipher = null;
+
+    if (settings.encryptionEnabled) {
+      const key = crypto.randomBytes(32);
+      const iv = crypto.randomBytes(16);
+      encryptionKeyHex = key.toString('hex');
+      encryptionIvHex = iv.toString('hex');
+      cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+    }
 
     // 1. Send outgoing transfer init notice to renderer
     mainWindow.webContents.send('outgoing-transfer-start', {
@@ -656,7 +669,10 @@ async function sendFileToPeer(peer, filePath) {
       deviceType: settings.deviceType,
       fileName,
       size,
-      pin: peer.pin // UI must provide this if peer has "Require PIN" on
+      pin: peer.pin, // UI must provide this if peer has "Require PIN" on
+      encrypted: !!settings.encryptionEnabled,
+      key: encryptionKeyHex,
+      iv: encryptionIvHex
     };
 
     const response = await fetch(receiverUrl, {
@@ -715,10 +731,24 @@ async function sendFileToPeer(peer, filePath) {
         speed,
         percent
       });
-      progressStream.push(chunk);
+
+      if (cipher) {
+        const encryptedChunk = cipher.update(chunk);
+        if (encryptedChunk.length > 0) {
+          progressStream.push(encryptedChunk);
+        }
+      } else {
+        progressStream.push(chunk);
+      }
     });
 
     fileStream.on('end', () => {
+      if (cipher) {
+        const finalChunk = cipher.final();
+        if (finalChunk.length > 0) {
+          progressStream.push(finalChunk);
+        }
+      }
       progressStream.push(null);
     });
 

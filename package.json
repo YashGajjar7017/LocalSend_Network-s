@@ -1,64 +1,66 @@
 {
-    "name":  "local-network-share",
-    "version":  "1.0.0",
-    "description":  "Secure cross-platform local network file sharing desktop app",
-    "main":  "main.js",
-    "scripts":  {
-                    "dev":  "vite",
-                    "electron-build":  "vite build",
-                    "preview":  "vite preview",
-                    "electron-start":  "electron .",
-                    "electron-dev":  "concurrently \"npm run dev\" \"npm run electron-start\"",
-                    "dist":  "powershell -ExecutionPolicy Bypass -File package-app.ps1",
-                    "electron-pack":  "powershell -ExecutionPolicy Bypass -File package-app.ps1"
-                },
-    "build":  {
-                  "appId":  "com.airsync.app",
-                  "productName":  "AirSync",
-                  "directories":  {
-                                      "output":  "out"
-                                  },
-                  "files":  [
-                                "dist/**/*",
-                                "main.js",
-                                "preload.js",
-                                "server/**/*",
-                                "package.json"
-                            ],
-                  "win":  {
-                              "target":  [
-                                             "nsis",
-                                             "msi"
-                                         ],
-                              "icon":  "build/icon.png"
-                          }
-              },
-    "dependencies":  {
-                         "@capacitor/android":  "^8.4.1",
-                         "@capacitor/cli":  "^8.4.1",
-                         "@capacitor/core":  "^8.4.1",
-                         "cors":  "^2.8.5",
-                         "dotenv":  "^16.4.5",
-                         "electron-is-dev":  "^2.0.0",
-                         "electron-squirrel-startup":  "^1.0.1",
-                         "express":  "^4.19.2",
-                         "express-session":  "^1.19.0",
-                         "framer-motion":  "^11.2.10",
-                         "lucide-react":  "^0.395.0",
-                         "react":  "^18.3.1",
-                         "react-dom":  "^18.3.1",
-                         "ws":  "^8.17.0"
-                     },
-    "devDependencies":  {
-                            "@types/react":  "^18.3.3",
-                            "@types/react-dom":  "^18.3.0",
-                            "@vitejs/plugin-react":  "^4.3.1",
-                            "autoprefixer":  "^10.4.19",
-                            "concurrently":  "^8.2.2",
-                            "electron":  "^31.0.0",
-                            "electron-builder":  "^24.13.3",
-                            "postcss":  "^8.4.38",
-                            "tailwindcss":  "^3.4.4",
-                            "vite":  "^5.2.11"
-                        }
+    "name": "local-network-share",
+    "version": "1.0.0",
+    "description": "Secure cross-platform local network file sharing desktop app",
+    "main": "main.js",
+    "author": "Yash_LocalNetwork_Pvt",
+    "scripts": {
+        "dev": "vite",
+        "build": "vite build",
+        "dist": "powershell -ExecutionPolicy Bypass -File package-app.ps1",
+        "preview": "vite preview",
+        "electron-build": "npm run build && electron-builder",
+        "electron-start": "electron .",
+        "electron-dev": "concurrently \"npm run dev\" \"npm run electron-start\"",
+        "electron-pack": "powershell -ExecutionPolicy Bypass -File package-app.ps1"
+    },
+    "build": {
+        "appId": "com.airsync.app",
+        "productName": "LocalNetwork",
+        "directories": {
+            "output": "out"
+        },
+        "files": [
+            "dist/**/*",
+            "main.js",
+            "preload.js",
+            "server/**/*",
+            "package.json"
+        ],
+        "win": {
+            "target": [
+                "nsis",
+                "msi"
+            ],
+            "icon": "build/icon.png"
+        }
+    },
+    "dependencies": {
+        "cors": "^2.8.5",
+        "dotenv": "^16.4.5",
+        "electron-is-dev": "^2.0.0",
+        "electron-squirrel-startup": "^1.0.1",
+        "express": "^4.19.2",
+        "express-session": "^1.19.0",
+        "framer-motion": "^11.2.10",
+        "lucide-react": "^0.395.0",
+        "react": "^18.3.1",
+        "react-dom": "^18.3.1",
+        "ws": "^8.17.0"
+    },
+    "devDependencies": {
+        "@capacitor/android": "^8.4.1",
+        "@capacitor/cli": "^8.4.1",
+        "@capacitor/core": "^8.4.1",
+        "@types/react": "^18.3.3",
+        "@types/react-dom": "^18.3.0",
+        "@vitejs/plugin-react": "^4.3.1",
+        "autoprefixer": "^10.4.19",
+        "concurrently": "^8.2.2",
+        "electron": "^31.0.0",
+        "electron-builder": "^24.13.3",
+        "postcss": "^8.4.38",
+        "tailwindcss": "^3.4.4",
+        "vite": "^5.2.11"
+    }
 }

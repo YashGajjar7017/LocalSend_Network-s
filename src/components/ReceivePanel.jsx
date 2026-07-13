@@ -37,7 +37,7 @@ export default function ReceivePanel() {
   const activeMode = getQuickSaveMode();
 
   return (
-    <div className="flex-1 flex flex-col h-screen overflow-hidden p-8 select-none relative">
+    <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 pb-20 md:pb-8 select-none relative">
       
       {/* Top Header Buttons (History & About) */}
       <div className="flex items-center justify-end gap-3 mb-6">
