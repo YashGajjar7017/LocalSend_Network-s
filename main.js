@@ -105,16 +105,16 @@ function createTray() {
   );
   tray = new Tray(trayIcon);
   const contextMenu = Menu.buildFromTemplate([
-    { label: 'Open AirSync', click: () => { if (mainWindow) mainWindow.show(); } },
+    { label: 'Open LocalNetwork', click: () => { if (mainWindow) mainWindow.show(); } },
     { type: 'separator' },
     {
-      label: 'Quit AirSync', click: () => {
+      label: 'Quit LocalNetwork', click: () => {
         app.isQuitting = true;
         app.quit();
       }
     }
   ]);
-  tray.setToolTip('AirSync - Local Share');
+  tray.setToolTip('LocalNetwork - Local Share');
   tray.setContextMenu(contextMenu);
   tray.on('double-click', () => {
     if (mainWindow) mainWindow.show();
@@ -143,7 +143,7 @@ function createWindow() {
     y: bounds.y,
     minWidth: 800,
     minHeight: 600,
-    title: 'AirSync',
+    title: 'LocalNetwork',
     backgroundColor: '#020617', // slate-950
     show: false,
     icon: path.join(__dirname, 'build', 'icon.png'),
@@ -153,6 +153,39 @@ function createWindow() {
       nodeIntegration: false,
       sandbox: false
     }
+  });
+
+  // Handle Web Bluetooth API callbacks
+  mainWindow.webContents.on('select-bluetooth-device', (event, deviceList, callback) => {
+    event.preventDefault();
+    console.log('Discovered bluetooth devices:', deviceList);
+    
+    // Store the callback so we can invoke it later
+    global.selectBluetoothCallback = callback;
+
+    // Send each discovered device to the renderer on the standard channel
+    deviceList.forEach((d) => {
+      let type = 'mobile';
+      const name = (d.deviceName || '').toLowerCase();
+      if (name.includes('headphone') || name.includes('buds') || name.includes('wh-') || name.includes('audio') || name.includes('sound') || name.includes('speaker')) {
+        type = 'headphones';
+      } else if (name.includes('tab') || name.includes('ipad')) {
+        type = 'tablet';
+      } else if (name.includes('watch')) {
+        type = 'watch';
+      } else if (name.includes('pc') || name.includes('laptop') || name.includes('desktop') || name.includes('macbook') || name.includes('computer')) {
+        type = 'laptop';
+      }
+      
+      mainWindow.webContents.send('bluetooth-device-found', {
+        id: d.deviceId,
+        name: d.deviceName || 'Unnamed Device',
+        type: type,
+        signalStrength: -60 - Math.floor(Math.random() * 20),
+        paired: false,
+        isReal: true
+      });
+    });
   });
 
   // Hide native menu
@@ -425,7 +458,7 @@ ipcMain.handle('github-signin', async () => {
       authWindow.show();
     });
 
-    authWindow.webContents.on('will-navigate', (event, url) => {
+    const handleNavigation = (url) => {
       if (url.includes('?auth=success')) {
         authWindow.close();
         
@@ -440,6 +473,14 @@ ipcMain.handle('github-signin', async () => {
           html_url: 'https://github.com/GithubUserData'
         });
       }
+    };
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      handleNavigation(url);
+    });
+
+    authWindow.webContents.on('did-navigate', (event, url) => {
+      handleNavigation(url);
     });
 
     authWindow.on('closed', () => {
@@ -566,7 +607,7 @@ ipcMain.handle('google-signin', async () => {
       authWindow.show();
     });
 
-    authWindow.webContents.on('will-navigate', (event, url) => {
+    const handleNavigation = (url) => {
       if (url.includes('?auth=success')) {
         authWindow.close();
         
@@ -581,6 +622,14 @@ ipcMain.handle('google-signin', async () => {
           html_url: '#'
         });
       }
+    };
+
+    authWindow.webContents.on('will-navigate', (event, url) => {
+      handleNavigation(url);
+    });
+
+    authWindow.webContents.on('did-navigate', (event, url) => {
+      handleNavigation(url);
     });
 
     authWindow.on('closed', () => {
@@ -823,7 +872,7 @@ const mockBluetoothDevices = [
 ipcMain.on('bluetooth-start-scan', (event) => {
   if (bluetoothScanTimer) clearInterval(bluetoothScanTimer);
 
-  // Simulate discoverable devices showing up in waves to create a dynamic feel
+  // 1. Send simulated mock devices
   let idx = 0;
   bluetoothScanTimer = setInterval(() => {
     if (idx < mockBluetoothDevices.length) {
@@ -834,6 +883,19 @@ ipcMain.on('bluetooth-start-scan', (event) => {
       bluetoothScanTimer = null;
     }
   }, 2000);
+
+  // 2. Query real operating system bluetooth devices via web API
+  mainWindow.webContents.executeJavaScript(`
+    if (navigator.bluetooth) {
+      navigator.bluetooth.requestDevice({
+        acceptAllDevices: true
+      }).catch(err => {
+        console.log('Bluetooth scan query ended or closed:', err.message);
+      });
+    }
+  `).catch(err => {
+    console.error('Failed to invoke navigator.bluetooth scan:', err);
+  });
 });
 
 ipcMain.on('bluetooth-stop-scan', (event) => {
@@ -844,10 +906,21 @@ ipcMain.on('bluetooth-stop-scan', (event) => {
 });
 
 ipcMain.on('bluetooth-pair', (event, deviceId) => {
-  // Simulate handshake duration, then return success
+  // If this was a real device, invoke the select-bluetooth-device callback
+  if (global.selectBluetoothCallback) {
+    try {
+      global.selectBluetoothCallback(deviceId);
+      global.selectBluetoothCallback = null;
+      console.log('Invoked real Bluetooth selection callback for:', deviceId);
+    } catch (e) {
+      console.warn('Bluetooth callback invoke error:', e);
+    }
+  }
+
+  // Simulate handshake animation and return success
   setTimeout(() => {
     mainWindow.webContents.send('bluetooth-pairing-success', deviceId);
-  }, 4000); // 4-second animated handshake
+  }, 3000);
 });
 
 // App ready listener

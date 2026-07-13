@@ -20,14 +20,35 @@ import {
 } from 'lucide-react';
 
 export default function NetworkDiscovery() {
-  const { peers, isScanning, triggerFileSend, toggleFavorite, settings, githubUser, connectToDirectIp, networkInfo } = useApp();
+  const {
+    peers,
+    isScanning,
+    triggerFileSend,
+    toggleFavorite,
+    settings,
+    githubUser,
+    connectToDirectIp,
+    networkInfo,
+    portalFiles,
+    portalUrl,
+    addFileToPortal,
+    removeFileFromPortal
+  } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [showNetworkWarning, setShowNetworkWarning] = useState(false);
 
-  const isNetworkConnected = networkInfo && 
-                             networkInfo !== 'No active network connection' && 
-                             !networkInfo.includes('Detecting');
-  
+  const formatSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  };
+
+  const isNetworkConnected = networkInfo &&
+    networkInfo !== 'No active network connection' &&
+    !networkInfo.includes('Detecting');
+
   // Link sharing state
   const [linkFile, setLinkFile] = useState(null);
   const [linkProgress, setLinkProgress] = useState(0);
@@ -79,13 +100,13 @@ export default function NetworkDiscovery() {
     return { label: 'Unknown', color: 'text-slate-400' };
   };
 
-  const formatSize = (bytes) => {
-    if (!bytes) return '0 B';
-    const k = 1024;
-    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
-  };
+  // const formatSize = (bytes) => {
+  //   if (!bytes) return '0 B';
+  //   const k = 1024;
+  //   const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+  //   const i = Math.floor(Math.log(bytes) / Math.log(k));
+  //   return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  // };
 
   const handleSelectLinkFile = async () => {
     if (!isNetworkConnected) {
@@ -106,7 +127,7 @@ export default function NetworkDiscovery() {
     if (!linkFile) return;
     setLinkStatus('uploading');
     setLinkProgress(0);
-    
+
     const interval = setInterval(() => {
       setLinkProgress((prev) => {
         if (prev >= 100) {
@@ -146,14 +167,14 @@ export default function NetworkDiscovery() {
     }
   };
 
-  const filteredPeers = peers.filter(peer => 
+  const filteredPeers = peers.filter(peer =>
     peer.deviceName.toLowerCase().includes(searchTerm.toLowerCase()) ||
     peer.ip.includes(searchTerm)
   );
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-y-auto p-4 md:p-8 select-none relative pb-20 md:pb-8">
-      
+
       {/* Network Alert Warning */}
       <AnimatePresence>
         {showNetworkWarning && (
@@ -170,7 +191,7 @@ export default function NetworkDiscovery() {
               <span className="text-xs font-bold block">Network isn't selected</span>
               <span className="text-[10px] text-slate-400 block mt-0.5">Please check your Wi-Fi connection. You must be connected to a network to share files.</span>
             </div>
-            <button 
+            <button
               onClick={() => setShowNetworkWarning(false)}
               className="text-[10px] bg-red-500/20 hover:bg-red-500/40 text-red-200 font-bold px-2.5 py-1 rounded-md"
             >
@@ -251,7 +272,7 @@ export default function NetworkDiscovery() {
                 <Upload className="w-4 h-4 text-accent" />
                 Select File
               </button>
-              
+
               {linkFile && (
                 <div className="flex-1 min-w-0 bg-slate-100/50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 rounded-xl px-4 py-2 flex items-center justify-between">
                   <div className="flex flex-col min-w-0 pr-4">
@@ -338,6 +359,73 @@ export default function NetworkDiscovery() {
         </button>
       </div>
 
+      {/* Web Share Portal Management Card */}
+      <div className="bg-white/40 dark:bg-slate-900/40 border border-slate-200 dark:border-white/5 rounded-2xl p-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3 min-w-0">
+            <div className="p-3 rounded-xl bg-accent/10 border border-accent/20 text-accent">
+              <Globe className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200">Web Share Portal</h3>
+              <p className="text-[10px] text-slate-500 mt-0.5">Let other devices on the Wi-Fi download/upload files via a web browser.</p>
+              {portalUrl && (
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="text-[10px] font-mono text-accent bg-accent/5 px-2 py-0.5 rounded border border-accent/10 truncate select-all">{portalUrl}</span>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(portalUrl);
+                      alert('Portal URL copied to clipboard!');
+                    }}
+                    className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors"
+                    title="Copy URL"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" /></svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <button
+            onClick={async () => {
+              if (window.electronAPI) {
+                const file = await window.electronAPI.selectFile();
+                if (file) {
+                  await addFileToPortal(file);
+                }
+              }
+            }}
+            className="px-4 py-2 bg-accent text-slate-950 rounded-xl text-xs font-bold hover:bg-accent-light transition-all shadow-md shadow-accent/10 shrink-0 self-start sm:self-center"
+          >
+            Add File to Portal
+          </button>
+        </div>
+
+        {/* Portal files list */}
+        {portalFiles && portalFiles.length > 0 && (
+          <div className="mt-4 border-t border-slate-200 dark:border-white/5 pt-4">
+            <h4 className="text-[10px] font-bold text-slate-500 uppercase mb-2">Files Shared on Portal ({portalFiles.length})</h4>
+            <div className="space-y-2 max-h-[120px] overflow-y-auto pr-1">
+              {portalFiles.map(file => (
+                <div key={file.id} className="flex items-center justify-between p-2 rounded-lg bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-white/5 animate-fade-in">
+                  <div className="min-w-0 flex-1 pr-4">
+                    <p className="text-[10px] font-semibold text-slate-700 dark:text-slate-300 truncate">{file.name}</p>
+                    <p className="text-[9px] font-mono text-slate-500">{formatSize(file.size)}</p>
+                  </div>
+                  <button
+                    onClick={() => removeFileFromPortal(file.id)}
+                    className="text-[9px] font-bold text-red-500 hover:text-red-400 transition-colors p-1"
+                  >
+                    Stop Share
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+
       {/* Grid of Devices */}
       <div className="flex-1 overflow-y-auto pr-2 pb-6">
         {filteredPeers.length === 0 ? (
@@ -352,7 +440,7 @@ export default function NetworkDiscovery() {
             </p>
           </div>
         ) : (
-          <motion.div 
+          <motion.div
             layout
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6"
           >
@@ -381,12 +469,12 @@ export default function NetworkDiscovery() {
                   >
                     {/* Glass shimmer background effect */}
                     <div className="absolute inset-0 bg-gradient-to-tr from-accent/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                    
+
                     <div className="flex items-start justify-between relative z-10">
                       <div className="p-3 bg-slate-100 dark:bg-slate-950/60 rounded-xl border border-slate-200 dark:border-white/5 text-slate-500 dark:text-slate-300 group-hover:text-accent transition-colors duration-300">
                         <DeviceIcon className="w-6 h-6" />
                       </div>
-                      
+
                       {/* Favorite Star Button */}
                       <button
                         onClick={(e) => {
@@ -435,7 +523,7 @@ export default function NetworkDiscovery() {
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-4 text-center">
               Direct IP Connection
             </h3>
-            
+
             <form onSubmit={handleDirectConnect} className="space-y-4 text-left">
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase">IP Address</label>

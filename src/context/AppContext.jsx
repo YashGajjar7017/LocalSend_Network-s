@@ -344,7 +344,9 @@ export const AppProvider = ({ children }) => {
     if (window.electronAPI) {
       window.electronAPI.respondToTransfer(transferId, accepted);
     }
-    if (!accepted) {
+    if (accepted) {
+      setTransferStatus('transferring');
+    } else {
       setIncomingTransfer(null);
       setTransferStatus(null);
     }
@@ -457,6 +459,35 @@ export const AppProvider = ({ children }) => {
     }
   };
 
+  const [portalFiles, setPortalFiles] = useState([]);
+  const [portalUrl, setPortalUrl] = useState('');
+
+  useEffect(() => {
+    if (window.electronAPI) {
+      window.electronAPI.portalGetFiles().then(setPortalFiles);
+      window.electronAPI.portalGetUrl().then(setPortalUrl);
+
+      const unsubPortalFiles = window.electronAPI.onPortalFilesChanged((files) => {
+        setPortalFiles(files);
+      });
+      return () => {
+        unsubPortalFiles();
+      };
+    }
+  }, []);
+
+  const addFileToPortal = async (fileInfo) => {
+    if (window.electronAPI) {
+      await window.electronAPI.portalAddFile(fileInfo);
+    }
+  };
+
+  const removeFileFromPortal = async (fileId) => {
+    if (window.electronAPI) {
+      await window.electronAPI.portalRemoveFile(fileId);
+    }
+  };
+
   const restartServer = async () => {
     setServerState('restarting');
     if (window.electronAPI) {
@@ -503,6 +534,11 @@ export const AppProvider = ({ children }) => {
         stopBluetoothScan,
         pairBluetoothDevice,
         setBluetoothHandshakeState,
+        // Web Share Portal
+        portalFiles,
+        portalUrl,
+        addFileToPortal,
+        removeFileFromPortal,
 
         // GitHub and Server controls
         githubUser,

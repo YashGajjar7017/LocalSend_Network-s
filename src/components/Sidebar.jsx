@@ -18,11 +18,11 @@ export default function Sidebar() {
       {/* App Branding */}
       <div className="p-6 flex items-center gap-3 border-b border-slate-200 dark:border-white/5 titlebar-drag">
         <div className="relative flex items-center justify-center w-10 h-10 rounded-xl bg-gradient-to-tr from-slate-200 to-slate-100 dark:from-accent dark:to-accent-light shadow-md shadow-accent/10 dark:shadow-accent/20">
-          <img src={LogoIcon} className="w-6.5 h-6.5 object-contain" alt="AirSync Logo" />
+          <img src={LogoIcon} className="w-6.5 h-6.5 object-contain" alt="LocalNetwork Logo" />
           <div className="absolute -inset-0.5 bg-accent rounded-xl blur opacity-10 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 animate-tilt"></div>
         </div>
         <div className="flex flex-col">
-          <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">AirSync</span>
+          <span className="font-bold text-lg tracking-tight bg-gradient-to-r from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-slate-100 dark:to-slate-400 bg-clip-text text-transparent">LocalNetwork</span>
           <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium tracking-widest uppercase">File Sharing</span>
         </div>
       </div>

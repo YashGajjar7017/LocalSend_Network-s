@@ -28,6 +28,17 @@ contextBridge.exposeInMainWorld('electronAPI', {
   stopBluetoothScan: () => ipcRenderer.send('bluetooth-stop-scan'),
   pairBluetoothDevice: (deviceId) => ipcRenderer.send('bluetooth-pair', deviceId),
   
+  // Web Share Portal control
+  portalGetFiles: () => ipcRenderer.invoke('portal-get-files'),
+  portalAddFile: (fileInfo) => ipcRenderer.invoke('portal-add-file', fileInfo),
+  portalRemoveFile: (fileId) => ipcRenderer.invoke('portal-remove-file', fileId),
+  portalGetUrl: () => ipcRenderer.invoke('portal-get-url'),
+  onPortalFilesChanged: (callback) => {
+    const subscription = (event, files) => callback(files);
+    ipcRenderer.on('portal-files-changed', subscription);
+    return () => ipcRenderer.removeListener('portal-files-changed', subscription);
+  },
+
   // Event Receivers
   onPeersUpdated: (callback) => {
     const subscription = (event, peers) => callback(peers);

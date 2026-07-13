@@ -51,7 +51,7 @@ export default function ReceivePanel() {
         <button
           onClick={() => setShowInfo(!showInfo)}
           className="p-2.5 rounded-full hover:bg-slate-200/50 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 transition-colors"
-          title="About AirSync"
+          title="About LocalNetwork"
         >
           <Info className="w-5 h-5" />
         </button>
@@ -143,7 +143,7 @@ export default function ReceivePanel() {
           <div className="glass-card max-w-sm w-full p-6 border-slate-200 dark:border-white/10 shadow-2xl relative bg-white/95 dark:bg-slate-900/90 text-left">
             <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100 uppercase tracking-wider mb-2 flex items-center gap-2">
               <ShieldCheck className="w-4 h-4 text-accent" />
-              AirSync Secure Node
+              LocalNetwork Secure Node
             </h3>
             <p className="text-xs text-slate-600 dark:text-slate-400 leading-relaxed space-y-1.5">
               This node is active and waiting for file transfers on your local subnet.Senders can send files directly to you when they are on the same Wi-Fi.
